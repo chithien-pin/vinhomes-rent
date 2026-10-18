@@ -1,0 +1,9 @@
+{
+  "name": "So sánh căn hộ thuê",
+  "short_name": "So sánh thuê",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#059669",
+  "lang": "vi"
+}

@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ListingStatus {
+  INTERESTED
+  VIEWED
+  REJECTED
+  CHOSEN
+}
+
+enum UnitType {
+  STUDIO
+  ONE_BR
+  ONE_BR_PLUS
+  TWO_BR
+  THREE_BR
+  OTHER
+}
+
+enum Furnishing {
+  NONE
+  BASIC
+  FULL
+}
+
+enum AreaBasis {
+  NET
+  GROSS
+}
+
+enum PaymentCycle {
+  MONTHLY
+  QUARTERLY
+}
+
+enum ContractType {
+  OWNER
+  AUTHORIZED
+  LONG_TERM
+  OTHER
+}
+
+enum PointKind {
+  PRO
+  CON
+}
+
+enum PhotoCategory {
+  LIVING
+  BEDROOM
+  KITCHEN
+  BATHROOM
+  BALCONY_VIEW
+  HALL_BUILDING
+  DOCUMENTS
+  OTHER
+}
+
+model User {
+  id        String         @id
+  email     String         @unique
+  settings  UserSettings?
+  listings  Listing[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model UserSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  weightPrice     Int @default(20)
+  weightLocation  Int @default(15)
+  weightLightView Int @default(15)
+  weightFurniture Int @default(10)
+  weightAmenities Int @default(10)
+  weightSecurity  Int @default(10)
+  weightLandlord  Int @default(10)
+  weightOverall   Int @default(10)
+
+  defaultMgmtFeePerM2       Int       @default(15400)
+  defaultMgmtFeeBasis       AreaBasis @default(NET)
+  defaultBikeFee            Int       @default(29455)
+  defaultMotorbikeFee       Int       @default(147273)
+  defaultCarFee             Int       @default(1227273)
+  defaultEvChargeFee        Int       @default(165000)
+  defaultElectricityPerKwh  Int?
+  defaultWaterPerM3         Int?
+  defaultLeaseMonths        Int       @default(12)
+}
+
+model Listing {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title        String
+  project      String?
+  building     String?
+  unitNumber   String?
+  address      String?
+  listingUrl   String?
+  contactName  String?
+  contactPhone String?
+  viewedAt     DateTime?
+  status       ListingStatus @default(INTERESTED)
+
+  unitType         UnitType   @default(TWO_BR)
+  unitTypeNote     String?
+  netAreaM2        Decimal?   @db.Decimal(8, 2)
+  grossAreaM2      Decimal?   @db.Decimal(8, 2)
+  floor            Int?
+  doorDirection    String?
+  balconyDirection String?
+  viewNote         String?
+  bedrooms         Int?
+  bathrooms        Int?
+  furnishing       Furnishing @default(NONE)
+  furnitureItems   String[]
+  contractType     ContractType?
+  contractNote     String?
+  minLeaseMonths   Int?
+  availableFrom    DateTime?
+
+  rentMonthly      Int?
+  depositMonths    Decimal?     @db.Decimal(4, 1)
+  depositAmount    Int?
+  paymentCycle     PaymentCycle @default(MONTHLY)
+  brokerageFee     Int?
+  rentIncludesMgmt Boolean      @default(false)
+  mgmtFeePerM2     Int?
+  mgmtFeeBasis     AreaBasis    @default(NET)
+
+  bikeCount      Int @default(0)
+  bikeFee        Int?
+  motorbikeCount Int @default(0)
+  motorbikeFee   Int?
+  carCount       Int @default(0)
+  carFee         Int?
+  evChargeCount  Int @default(0)
+  evChargeFee    Int?
+
+  electricityPerKwh   Int?
+  electricityKwhMonth Decimal? @db.Decimal(8, 1)
+  waterPerM3          Int?
+  waterM3Month        Decimal? @db.Decimal(8, 1)
+  internetFee         Int?
+  tvFee               Int?
+  leaseMonths         Int?
+
+  scorePrice     Int?
+  scoreLocation  Int?
+  scoreLightView Int?
+  scoreFurniture Int?
+  scoreAmenities Int?
+  scoreSecurity  Int?
+  scoreLandlord  Int?
+  scoreOverall   Int?
+  notes          String? @db.Text
+
+  points ListingPoint[]
+  extras ExtraFee[]
+  photos ListingPhoto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, updatedAt])
+}
+
+model ListingPoint {
+  id        String    @id @default(cuid())
+  listingId String
+  listing   Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  kind      PointKind
+  text      String
+  sortOrder Int       @default(0)
+
+  @@index([listingId, kind, sortOrder])
+}
+
+model ExtraFee {
+  id        String  @id @default(cuid())
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  name      String
+  amount    Int
+  sortOrder Int     @default(0)
+}
+
+model ListingPhoto {
+  id          String        @id @default(cuid())
+  listingId   String
+  listing     Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  storagePath String
+  category    PhotoCategory @default(OTHER)
+  caption     String?
+  sortOrder   Int           @default(0)
+  isCover     Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  @@index([listingId, sortOrder])
+}
