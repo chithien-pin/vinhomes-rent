@@ -23,12 +23,26 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  const path = request.nextUrl.pathname;
+  const code = request.nextUrl.searchParams.get("code");
+
+  // Supabase đôi khi trả ?code= về Site URL (/) thay vì /auth/callback.
+  // Middleware cũ đẩy sang /login?code=... → không đổi được session.
+  if (code && !path.startsWith("/auth/callback")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    const nextParam = request.nextUrl.searchParams.get("next");
+    if (!nextParam || nextParam === path) {
+      url.searchParams.set("next", "/");
+    }
+    return NextResponse.redirect(url);
+  }
+
   // Bắt buộc gọi getUser() để refresh session cookie
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
   const isAuthRoute =
     path.startsWith("/login") || path.startsWith("/auth");
   const isPublicAsset =
@@ -39,13 +53,15 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isAuthRoute && !isPublicAsset) {
     const urlRedirect = request.nextUrl.clone();
     urlRedirect.pathname = "/login";
-    urlRedirect.searchParams.set("next", path);
+    urlRedirect.searchParams.delete("code");
+    urlRedirect.searchParams.set("next", path === "/" ? "/" : path);
     return NextResponse.redirect(urlRedirect);
   }
 
   if (user && path === "/login") {
     const urlRedirect = request.nextUrl.clone();
     urlRedirect.pathname = "/";
+    urlRedirect.search = "";
     return NextResponse.redirect(urlRedirect);
   }
 
