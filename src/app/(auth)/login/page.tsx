@@ -2,54 +2,36 @@
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { createClient } from "@/lib/supabase/client";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 
 function LoginForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/";
-  const authError = searchParams.get("error");
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState<"email" | "google" | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(
-    authError ? "Đăng nhập thất bại. Thử lại." : null
-  );
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function sendMagicLink(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setLoading("email");
+    setLoading(true);
     setError(null);
-    setMessage(null);
-    const supabase = createClient();
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      },
-    });
-    setLoading(null);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    setMessage("Đã gửi magic link. Kiểm tra email và bấm vào liên kết để đăng nhập.");
-  }
-
-  async function signInGoogle() {
-    setLoading("google");
-    setError(null);
-    const supabase = createClient();
-    const { error: err } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      },
-    });
-    if (err) {
-      setLoading(null);
-      setError(err.message);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Đăng nhập thất bại");
+      router.replace(next.startsWith("/") ? next : "/");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -64,51 +46,32 @@ function LoginForm() {
             So sánh căn hộ thuê
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Đăng nhập để lưu căn đã xem trên mọi thiết bị
+            Đăng nhập admin để quản lý căn đã xem
           </p>
         </div>
 
-        <form onSubmit={sendMagicLink} className="space-y-3">
+        <form onSubmit={onSubmit} className="space-y-3">
           <Input
-            type="email"
-            label="Email"
-            placeholder="ban@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            label="Tài khoản"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
             required
-            autoComplete="email"
           />
-          <Button
-            type="submit"
-            className="w-full"
-            loading={loading === "email"}
-            disabled={!email}
-          >
-            Gửi magic link
+          <Input
+            type="password"
+            label="Mật khẩu"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+            placeholder="••••••"
+          />
+          <Button type="submit" className="w-full" loading={loading}>
+            Đăng nhập
           </Button>
         </form>
 
-        <div className="my-4 flex items-center gap-3 text-xs text-slate-400">
-          <div className="h-px flex-1 bg-slate-200" />
-          hoặc
-          <div className="h-px flex-1 bg-slate-200" />
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          loading={loading === "google"}
-          onClick={signInGoogle}
-        >
-          Đăng nhập với Google
-        </Button>
-
-        {message && (
-          <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            {message}
-          </p>
-        )}
         {error && (
           <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {error}

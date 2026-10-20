@@ -16,19 +16,19 @@ Web app mobile-first để ghi nhận căn hộ đang xem, tính chi phí cư d�
 - Node.js 20+ (khuyến nghị 22)
 - Tài khoản [Supabase](https://supabase.com)
 
+## Đăng nhập (hiện tại)
+
+Một tài khoản cố định: **`admin` / `admin`** (đổi bằng `ADMIN_USERNAME` / `ADMIN_PASSWORD`).  
+App dùng **user đầu tiên** trong database (dữ liệu bạn đã có). Khi cần nhiều user / Google / magic link, báo lại để bật lại.
+
 ## 1. Tạo project Supabase
 
-1. Tạo project mới (region gần bạn, ví dụ Singapore).
-2. **Authentication → Providers**
-   - Bật **Email** (magic link).
-   - (Tuỳ chọn) bật **Google** và điền Client ID/Secret.
-3. **Authentication → URL Configuration**
-   - Site URL: `http://localhost:3000` (local) hoặc domain Vercel.
-   - Redirect URLs thêm: `http://localhost:3000/auth/callback` và `https://YOUR_DOMAIN/auth/callback`.
-4. **Storage**: chạy SQL trong [`supabase/storage-policies.sql`](supabase/storage-policies.sql) (tạo bucket `listing-photos` + policy).
-5. Lấy biến môi trường:
-   - Settings → API: `Project URL`, `anon public`
-   - Settings → Database: connection strings (pooler 6543 + direct 5432)
+1. Tạo project mới.
+2. **Storage**: chạy SQL trong [`supabase/storage-policies.sql`](supabase/storage-policies.sql).
+3. Biến môi trường:
+   - `DATABASE_URL` / `DIRECT_URL` (Database → Connect → Prisma)
+   - `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (Settings → API) — service role để upload ảnh
+   - `ADMIN_*` + `SESSION_SECRET`
 
 ## 2. Chạy local
 
@@ -41,7 +41,7 @@ npx prisma migrate dev --name init
 npm run dev
 ```
 
-Mở [http://localhost:3000](http://localhost:3000) → đăng nhập magic link → **Tải 3 căn mẫu**.
+Mở [http://localhost:3000](http://localhost:3000) → đăng nhập `admin` / `admin` → **Tải 3 căn mẫu** (nếu chưa có data).
 
 ### Scripts
 

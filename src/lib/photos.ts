@@ -3,9 +3,7 @@ import {
   MAX_PHOTO_SIZE_MB,
   PHOTO_MAX_DIMENSION,
   PHOTO_QUALITY,
-  STORAGE_BUCKET,
 } from "./constants";
-import { createClient } from "./supabase/client";
 
 export async function compressImage(file: File): Promise<File> {
   const compressed = await imageCompression(file, {
@@ -19,47 +17,43 @@ export async function compressImage(file: File): Promise<File> {
   return new File([compressed], name, { type: "image/jpeg" });
 }
 
-export async function uploadListingPhoto(params: {
-  file: File;
-  userId: string;
+export async function fetchSignedUrls(
+  paths: string[]
+): Promise<Record<string, string>> {
+  if (!paths.length) return {};
+  const res = await fetch("/api/photos/sign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ paths }),
+  });
+  if (!res.ok) return {};
+  const data = await res.json();
+  return data.urls ?? {};
+}
+
+export async function uploadListingPhotoFile(params: {
   listingId: string;
-  photoId: string;
+  file: File;
   onProgress?: (pct: number) => void;
-}): Promise<string> {
-  const { file, userId, listingId, photoId, onProgress } = params;
-  const path = `${userId}/${listingId}/${photoId}.jpg`;
-  const supabase = createClient();
-
-  // Supabase JS doesn't expose XHR progress; approximate with start/end.
-  onProgress?.(10);
-  const { error } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: "image/jpeg",
-    });
-  if (error) throw error;
+}) {
+  const { listingId, file, onProgress } = params;
+  onProgress?.(20);
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`/api/listings/${listingId}/photos/upload`, {
+    method: "POST",
+    body: form,
+  });
   onProgress?.(100);
-  return path;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Upload lỗi");
+  return data.photo as { id: string; storagePath: string };
 }
 
-export async function getSignedPhotoUrl(
-  storagePath: string,
-  expiresIn = 3600
-): Promise<string | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .createSignedUrl(storagePath, expiresIn);
-  if (error) return null;
-  return data.signedUrl;
-}
-
-export async function uploadWithRetry(
-  fn: () => Promise<string>,
+export async function uploadWithRetry<T>(
+  fn: () => Promise<T>,
   retries = 2
-): Promise<string> {
+): Promise<T> {
   let lastError: unknown;
   for (let i = 0; i <= retries; i++) {
     try {

@@ -4,11 +4,11 @@ import { Select } from "@/components/ui/Select";
 import {
   MAX_PHOTOS_PER_LISTING,
   PHOTO_CATEGORY_LABELS,
-  STORAGE_BUCKET,
 } from "@/lib/constants";
 import {
   compressImage,
-  uploadListingPhoto,
+  fetchSignedUrls,
+  uploadListingPhotoFile,
   uploadWithRetry,
 } from "@/lib/photos";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,6 @@ import { useCallback, useEffect, useState } from "react";
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
-import { createClient } from "@/lib/supabase/client";
 
 type PhotoWithUrl = ListingPhoto & { url?: string | null };
 
@@ -135,11 +134,10 @@ function SortablePhoto({
 
 export function PhotoManager({
   listingId,
-  userId,
   initialPhotos,
 }: {
   listingId: string;
-  userId: string;
+  userId?: string;
   initialPhotos: ListingPhoto[];
 }) {
   const [photos, setPhotos] = useState<PhotoWithUrl[]>(initialPhotos);
@@ -149,16 +147,10 @@ export function PhotoManager({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const loadUrls = useCallback(async (list: ListingPhoto[]) => {
-    const supabase = createClient();
-    const withUrls = await Promise.all(
-      list.map(async (p) => {
-        const { data } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .createSignedUrl(p.storagePath, 3600);
-        return { ...p, url: data?.signedUrl ?? null };
-      })
+    const urls = await fetchSignedUrls(list.map((p) => p.storagePath));
+    setPhotos(
+      list.map((p) => ({ ...p, url: urls[p.storagePath] ?? null }))
     );
-    setPhotos(withUrls);
   }, []);
 
   useEffect(() => {
@@ -180,24 +172,14 @@ export function PhotoManager({
         const file = selected[i];
         setProgress(`Nén & tải ${i + 1}/${selected.length}…`);
         const compressed = await compressImage(file);
-        const photoId = crypto.randomUUID();
-        const storagePath = await uploadWithRetry(() =>
-          uploadListingPhoto({
-            file: compressed,
-            userId,
+        await uploadWithRetry(() =>
+          uploadListingPhotoFile({
             listingId,
-            photoId,
+            file: compressed,
             onProgress: (pct) =>
               setProgress(`Tải ${i + 1}/${selected.length}: ${pct}%`),
           })
         );
-        const res = await fetch(`/api/listings/${listingId}/photos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ storagePath }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
       }
       const refreshed = await fetch(`/api/listings/${listingId}`);
       const data = await refreshed.json();

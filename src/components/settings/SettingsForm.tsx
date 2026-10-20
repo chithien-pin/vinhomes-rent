@@ -11,7 +11,7 @@ import {
 } from "@/lib/validators";
 import type { UserSettings } from "@prisma/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createClient } from "@/lib/supabase/client";
+import { signOutClient } from "@/lib/sign-out";
 import { LogOut, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -67,10 +67,7 @@ export function SettingsForm({ settings }: { settings: UserSettings }) {
   }
 
   async function signOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await signOutClient();
   }
 
   return (

@@ -1,8 +1,7 @@
 import { requireApiUser } from "@/lib/auth";
 import { apiError } from "@/lib/api";
-import { STORAGE_BUCKET } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
+import { removeFromStorage } from "@/lib/supabase/storage";
 import { NextResponse } from "next/server";
 
 type Params = { params: Promise<{ id: string; photoId: string }> };
@@ -44,8 +43,7 @@ export async function DELETE(_request: Request, { params }: Params) {
       where: { storagePath: photo.storagePath },
     });
     if (stillUsed === 0) {
-      const supabase = await createClient();
-      await supabase.storage.from(STORAGE_BUCKET).remove([photo.storagePath]);
+      await removeFromStorage([photo.storagePath]);
     }
 
     return NextResponse.json({ ok: true });

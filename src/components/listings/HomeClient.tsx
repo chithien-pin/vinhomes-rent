@@ -10,7 +10,7 @@ import {
   UNIT_TYPE_LABELS,
 } from "@/lib/constants";
 import type { EnrichedListing } from "@/lib/listings";
-import { createClient } from "@/lib/supabase/client";
+import { signOutClient } from "@/lib/sign-out";
 import { LogOut, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -99,10 +99,7 @@ export function HomeClient({
   }
 
   async function signOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await signOutClient();
   }
 
   function toggleSelect(id: string) {

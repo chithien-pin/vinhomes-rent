@@ -9,8 +9,7 @@ import {
 import { formatArea, formatScore, formatVnd } from "@/lib/format";
 import type { EnrichedListing } from "@/lib/listings";
 import { decimalToNumber } from "@/lib/listings";
-import { createClient } from "@/lib/supabase/client";
-import { STORAGE_BUCKET } from "@/lib/constants";
+import { fetchSignedUrls } from "@/lib/photos";
 import { Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -33,11 +32,8 @@ export function ListingCard({
     if (!cover) return;
     let cancelled = false;
     (async () => {
-      const supabase = createClient();
-      const { data } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .createSignedUrl(cover.storagePath, 3600);
-      if (!cancelled) setUrl(data?.signedUrl ?? null);
+      const urls = await fetchSignedUrls([cover.storagePath]);
+      if (!cancelled) setUrl(urls[cover.storagePath] ?? null);
     })();
     return () => {
       cancelled = true;

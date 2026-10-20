@@ -5,9 +5,8 @@ import {
   listingInclude,
 } from "@/lib/listings";
 import { prisma } from "@/lib/prisma";
-import { STORAGE_BUCKET } from "@/lib/constants";
-import { createClient } from "@/lib/supabase/server";
 import { listingFormSchema } from "@/lib/validators";
+import { removeFromStorage } from "@/lib/supabase/storage";
 import { NextResponse } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
@@ -111,8 +110,7 @@ export async function DELETE(_request: Request, { params }: Params) {
       const used = new Set(stillUsed.map((p) => p.storagePath));
       const toRemove = paths.filter((p) => !used.has(p));
       if (toRemove.length) {
-        const supabase = await createClient();
-        await supabase.storage.from(STORAGE_BUCKET).remove(toRemove);
+        await removeFromStorage(toRemove);
       }
     }
 

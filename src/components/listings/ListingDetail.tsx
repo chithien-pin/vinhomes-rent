@@ -12,13 +12,12 @@ import {
   LISTING_STATUS_LABELS,
   PHOTO_CATEGORY_LABELS,
   SCORE_CRITERIA,
-  STORAGE_BUCKET,
   UNIT_TYPE_LABELS,
 } from "@/lib/constants";
 import { formatArea, formatDateVi, formatScore, formatVnd } from "@/lib/format";
 import type { EnrichedListing } from "@/lib/listings";
 import { decimalToNumber } from "@/lib/listings";
-import { createClient } from "@/lib/supabase/client";
+import { fetchSignedUrls } from "@/lib/photos";
 import { ArrowLeft, Pencil, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -43,13 +42,13 @@ export function ListingDetail({ listing }: { listing: EnrichedListing }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const supabase = createClient();
+      const byPath = await fetchSignedUrls(
+        listing.photos.map((p) => p.storagePath)
+      );
       const entries: Record<string, string> = {};
       for (const p of listing.photos) {
-        const { data } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .createSignedUrl(p.storagePath, 3600);
-        if (data?.signedUrl) entries[p.id] = data.signedUrl;
+        const url = byPath[p.storagePath];
+        if (url) entries[p.id] = url;
       }
       if (!cancelled) setUrls(entries);
     })();

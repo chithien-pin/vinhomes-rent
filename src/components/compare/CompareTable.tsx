@@ -5,13 +5,12 @@ import {
   FURNISHING_LABELS,
   LISTING_STATUS_LABELS,
   SCORE_CRITERIA,
-  STORAGE_BUCKET,
   UNIT_TYPE_LABELS,
 } from "@/lib/constants";
 import { formatArea, formatScore, formatVnd } from "@/lib/format";
 import type { EnrichedListing } from "@/lib/listings";
 import { decimalToNumber } from "@/lib/listings";
-import { createClient } from "@/lib/supabase/client";
+import { fetchSignedUrls } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 import { toPng } from "html-to-image";
 import { Download, Printer } from "lucide-react";
@@ -51,15 +50,16 @@ export function CompareTable({ listings }: { listings: EnrichedListing[] }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const supabase = createClient();
+      const covers = listings
+        .map((l) => {
+          const cover = l.photos.find((p) => p.isCover) ?? l.photos[0];
+          return cover ? { id: l.id, path: cover.storagePath } : null;
+        })
+        .filter(Boolean) as { id: string; path: string }[];
+      const byPath = await fetchSignedUrls(covers.map((c) => c.path));
       const map: Record<string, string> = {};
-      for (const l of listings) {
-        const cover = l.photos.find((p) => p.isCover) ?? l.photos[0];
-        if (!cover) continue;
-        const { data } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .createSignedUrl(cover.storagePath, 3600);
-        if (data?.signedUrl) map[l.id] = data.signedUrl;
+      for (const c of covers) {
+        if (byPath[c.path]) map[c.id] = byPath[c.path];
       }
       if (!cancelled) setCoverUrls(map);
     })();
