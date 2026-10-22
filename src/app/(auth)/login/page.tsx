@@ -24,7 +24,13 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-      const data = await res.json();
+      const raw = await res.text();
+      let data: { error?: string } = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error("Máy chủ không trả JSON. Tải lại trang rồi thử lại.");
+      }
       if (!res.ok) throw new Error(data.error || "Đăng nhập thất bại");
       router.replace(next.startsWith("/") ? next : "/");
       router.refresh();

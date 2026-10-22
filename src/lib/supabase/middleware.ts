@@ -6,7 +6,9 @@ export async function updateSession(request: NextRequest) {
   const loggedIn = await isLoggedInFromRequest(request);
 
   const isAuthRoute =
-    path.startsWith("/login") || path.startsWith("/auth");
+    path.startsWith("/login") ||
+    path.startsWith("/auth") ||
+    path.startsWith("/api/auth");
   const isPublicAsset =
     path.startsWith("/_next") ||
     path.startsWith("/favicon") ||
