@@ -1,5 +1,8 @@
 import { AppNav } from "@/components/layout/AppNav";
 
+/** Không prerender lúc build — trang nào cũng cần Postgres. */
+export const dynamic = "force-dynamic";
+
 export default function AppLayout({
   children,
 }: {
