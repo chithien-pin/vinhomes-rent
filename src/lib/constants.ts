@@ -27,6 +27,7 @@ export const UNIT_TYPE_LABELS: Record<UnitType, string> = {
   ONE_BR: "1PN",
   ONE_BR_PLUS: "1PN+1",
   TWO_BR: "2PN",
+  TWO_BR_PLUS: "2PN+",
   THREE_BR: "3PN",
   OTHER: "Khác",
 };

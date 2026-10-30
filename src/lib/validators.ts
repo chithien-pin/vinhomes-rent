@@ -60,6 +60,7 @@ export const listingFormSchema = z.object({
     "ONE_BR",
     "ONE_BR_PLUS",
     "TWO_BR",
+    "TWO_BR_PLUS",
     "THREE_BR",
     "OTHER",
   ]),
