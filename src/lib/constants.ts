@@ -117,7 +117,6 @@ export const MAX_PHOTOS_PER_LISTING = 20;
 export const MAX_PHOTO_SIZE_MB = 1.5;
 export const PHOTO_MAX_DIMENSION = 1600;
 export const PHOTO_QUALITY = 0.8;
-export const STORAGE_BUCKET = "listing-photos";
 
 /** The Rainbow – Vinhomes Grand Park (cập nhật 08/2026) */
 export const RAINBOW_DEFAULTS = {

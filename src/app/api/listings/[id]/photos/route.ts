@@ -30,7 +30,10 @@ export async function POST(request: Request, { params }: Params) {
     if (!storagePath || typeof storagePath !== "string") {
       return NextResponse.json({ error: "Thiếu storagePath" }, { status: 400 });
     }
-    if (!storagePath.startsWith(`${user.id}/${id}/`)) {
+    const okPath =
+      storagePath.startsWith(`${user.id}/${id}/`) ||
+      storagePath.includes(`/listings/${user.id}/${id}/`);
+    if (!okPath) {
       return NextResponse.json({ error: "Path không hợp lệ" }, { status: 400 });
     }
 

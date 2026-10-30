@@ -1,8 +1,8 @@
 import { apiError } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
-import { MAX_PHOTOS_PER_LISTING, STORAGE_BUCKET } from "@/lib/constants";
+import { MAX_PHOTOS_PER_LISTING } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import { uploadToStorage } from "@/lib/supabase/storage";
+import { uploadToStorage } from "@/lib/storage";
 import { NextResponse } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
@@ -32,9 +32,9 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     const photoId = crypto.randomUUID();
-    const storagePath = `${user.id}/${id}/${photoId}.jpg`;
+    const pathname = `listings/${user.id}/${id}/${photoId}.jpg`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    await uploadToStorage(storagePath, buffer, "image/jpeg");
+    const url = await uploadToStorage(pathname, buffer, "image/jpeg");
 
     const maxOrder = listing.photos.reduce(
       (m, p) => Math.max(m, p.sortOrder),
@@ -45,13 +45,13 @@ export async function POST(request: Request, { params }: Params) {
     const photo = await prisma.listingPhoto.create({
       data: {
         listingId: id,
-        storagePath,
+        storagePath: url,
         sortOrder: maxOrder + 1,
         isCover: isFirst,
       },
     });
 
-    return NextResponse.json({ photo, bucket: STORAGE_BUCKET }, { status: 201 });
+    return NextResponse.json({ photo }, { status: 201 });
   } catch (error) {
     return apiError(error, "Upload ảnh thất bại");
   }

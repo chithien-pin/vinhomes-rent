@@ -1,7 +1,7 @@
 import { requireApiUser } from "@/lib/auth";
 import { apiError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { removeFromStorage } from "@/lib/supabase/storage";
+import { removeFromStorage } from "@/lib/storage";
 import { NextResponse } from "next/server";
 
 type Params = { params: Promise<{ id: string; photoId: string }> };

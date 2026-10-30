@@ -6,7 +6,7 @@ import {
 } from "@/lib/listings";
 import { prisma } from "@/lib/prisma";
 import { listingFormSchema } from "@/lib/validators";
-import { removeFromStorage } from "@/lib/supabase/storage";
+import { removeFromStorage } from "@/lib/storage";
 import { NextResponse } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
