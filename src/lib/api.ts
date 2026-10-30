@@ -6,5 +6,9 @@ export function apiError(error: unknown, fallback: string, status = 500) {
     return NextResponse.json({ error: error.message }, { status: 401 });
   }
   console.error(error);
-  return NextResponse.json({ error: fallback }, { status });
+  const detail =
+    error instanceof Error && error.message
+      ? `${fallback}: ${error.message}`
+      : fallback;
+  return NextResponse.json({ error: detail }, { status });
 }

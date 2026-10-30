@@ -1,14 +1,31 @@
-import { del, put } from "@vercel/blob";
+import {
+  del,
+  issueSignedToken,
+  presignUrl,
+  put,
+} from "@vercel/blob";
 
-/** Blob public URL đã lưu trong DB — trả về nguyên URL. */
-export function resolvePhotoUrls(paths: string[]): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const path of paths) {
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-      result[path] = path;
+function blobToken() {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    throw new Error(
+      "Thiếu BLOB_READ_WRITE_TOKEN trên Vercel (Storage → Blob → Connect)"
+    );
+  }
+  return token;
+}
+
+/** Lấy pathname từ URL Blob hoặc trả về nguyên chuỗi nếu đã là pathname. */
+export function blobPathname(urlOrPath: string): string {
+  if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")) {
+    try {
+      const u = new URL(urlOrPath);
+      return decodeURIComponent(u.pathname.replace(/^\//, ""));
+    } catch {
+      return urlOrPath;
     }
   }
-  return result;
+  return urlOrPath;
 }
 
 export async function uploadToStorage(
@@ -16,18 +33,49 @@ export async function uploadToStorage(
   file: Buffer,
   contentType: string
 ) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    throw new Error("Thiếu BLOB_READ_WRITE_TOKEN (Vercel Blob)");
-  }
-
+  const token = blobToken();
+  // Store đang để private — bắt buộc access: 'private'
   const blob = await put(pathname, file, {
-    access: "public",
+    access: "private",
     contentType,
-    token: process.env.BLOB_READ_WRITE_TOKEN,
+    token,
     addRandomSuffix: false,
   });
-
   return blob.url;
+}
+
+/** Tạo URL xem tạm (1h) cho ảnh private. */
+export async function createSignedUrls(
+  urlsOrPaths: string[]
+): Promise<Record<string, string>> {
+  if (!urlsOrPaths.length) return {};
+  const token = blobToken();
+  const validUntil = Date.now() + 60 * 60 * 1000;
+  const issued = await issueSignedToken({
+    token,
+    pathname: "*",
+    operations: ["get"],
+    validUntil,
+  });
+
+  const result: Record<string, string> = {};
+  await Promise.all(
+    urlsOrPaths.map(async (key) => {
+      try {
+        const pathname = blobPathname(key);
+        const { presignedUrl } = await presignUrl(issued, {
+          access: "private",
+          operation: "get",
+          pathname,
+          validUntil,
+        });
+        result[key] = presignedUrl;
+      } catch (err) {
+        console.error("presign failed", key, err);
+      }
+    })
+  );
+  return result;
 }
 
 export async function removeFromStorage(urlsOrPaths: string[]) {
@@ -35,7 +83,5 @@ export async function removeFromStorage(urlsOrPaths: string[]) {
     (p) => p.startsWith("http://") || p.startsWith("https://")
   );
   if (!urls.length) return;
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return;
-
-  await del(urls, { token: process.env.BLOB_READ_WRITE_TOKEN });
+  await del(urls, { token: blobToken() });
 }

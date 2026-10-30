@@ -45,9 +45,16 @@ export async function uploadListingPhotoFile(params: {
     body: form,
   });
   onProgress?.(100);
-  const data = await res.json();
+  const raw = await res.text();
+  let data: { error?: string; photo?: { id: string; storagePath: string } } =
+    {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new Error("Upload thất bại (máy chủ không trả JSON)");
+  }
   if (!res.ok) throw new Error(data.error || "Upload lỗi");
-  return data.photo as { id: string; storagePath: string };
+  return data.photo!;
 }
 
 export async function uploadWithRetry<T>(
