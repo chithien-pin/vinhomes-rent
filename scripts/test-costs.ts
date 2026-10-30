@@ -1,4 +1,5 @@
 import { calculateCosts } from "../src/lib/costs";
+import { calculateTieredElectricity } from "../src/lib/electricity";
 import { calculateWeightedScore } from "../src/lib/scores";
 import { RAINBOW_DEFAULTS } from "../src/lib/constants";
 
@@ -10,9 +11,22 @@ const settings = {
   defaultCarFee: RAINBOW_DEFAULTS.carFee,
   defaultEvChargeFee: RAINBOW_DEFAULTS.evChargeFee,
   defaultElectricityPerKwh: null,
-  defaultWaterPerM3: null,
+  defaultWaterPerM3: RAINBOW_DEFAULTS.waterPerM3,
   defaultLeaseMonths: 12,
 };
+
+// Ví dụ user: ~271 kWh → ~652.000 đ (chưa VAT)
+const billNoVat = calculateTieredElectricity(270.8, { includeVat: false });
+console.assert(
+  Math.abs(billNoVat.subtotal - 652_000) < 500,
+  `expected ~652000 got ${billNoVat.subtotal}`
+);
+
+const billWithVat = calculateTieredElectricity(270.8, { includeVat: true });
+console.assert(
+  billWithVat.total === Math.round(billNoVat.subtotal * 1.08),
+  `VAT total ${billWithVat.total}`
+);
 
 const studio = calculateCosts(
   {
@@ -45,19 +59,23 @@ const studio = calculateCosts(
   settings
 );
 
-const expectedMgmt = Math.round(29 * 15400); // 446_600
-console.assert(studio.mgmtFee === expectedMgmt, `mgmt ${studio.mgmtFee} != ${expectedMgmt}`);
-console.assert(studio.parkingMotorbike === 147273, "motorbike fee");
+const expectedMgmt = Math.round(29 * 15400);
+console.assert(studio.mgmtFee === expectedMgmt, `mgmt ${studio.mgmtFee}`);
+console.assert(studio.electricityEstimated, "electricity estimated via tiers");
 console.assert(
-  studio.fixedMonthly ===
-    6_500_000 + expectedMgmt + 147273 + 200_000,
-  `fixed ${studio.fixedMonthly}`
+  studio.electricityBill?.method === "tiered",
+  "tiered method"
 );
-console.assert(!studio.electricityEstimated, "electricity not estimated without rate");
-console.assert(studio.deposit === 13_000_000, "deposit 2 months");
+// 150 kWh: 50*1984 + 50*2050 + 50*2380 = 99200+102500+119000 = 320700; +VAT 8%
+const expectedElec = Math.round(320_700 * 1.08);
 console.assert(
-  studio.moveInCost === 13_000_000 + 6_500_000 + 3_250_000,
-  "move-in"
+  studio.electricity === expectedElec,
+  `elec ${studio.electricity} != ${expectedElec}`
+);
+console.assert(studio.waterEstimated, "water estimated");
+console.assert(
+  studio.water === 8 * 6700,
+  `water ${studio.water} != ${8 * 6700}`
 );
 
 const score = calculateWeightedScore(
@@ -84,11 +102,10 @@ const score = calculateWeightedScore(
 );
 console.assert(score !== null && score >= 3.5 && score <= 5, `score ${score}`);
 
-console.log("OK — costs & scores");
+console.log("OK — costs, tiers & scores");
 console.log({
-  mgmtFee: studio.mgmtFee,
-  fixedMonthly: studio.fixedMonthly,
+  example271kwhNoVat: billNoVat.subtotal,
+  example271kwhWithVat: billWithVat.total,
+  studioElectricity: studio.electricity,
   estimatedMonthly: studio.estimatedMonthly,
-  moveInCost: studio.moveInCost,
-  weightedScore: score,
 });

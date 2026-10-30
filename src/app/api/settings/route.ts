@@ -1,5 +1,6 @@
 import { requireApiUser } from "@/lib/auth";
 import { apiError } from "@/lib/api";
+import { RAINBOW_DEFAULTS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { settingsFormSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
@@ -27,7 +28,11 @@ export async function PUT(request: Request) {
 
     const settings = await prisma.userSettings.update({
       where: { userId: user.id },
-      data: parsed.data,
+      data: {
+        ...parsed.data,
+        defaultWaterPerM3:
+          parsed.data.defaultWaterPerM3 ?? RAINBOW_DEFAULTS.waterPerM3,
+      },
     });
 
     return NextResponse.json({ settings });

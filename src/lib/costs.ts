@@ -1,4 +1,10 @@
 import type { AreaBasis } from "@prisma/client";
+import { RAINBOW_DEFAULTS } from "./constants";
+import {
+  calculateFlatElectricity,
+  calculateTieredElectricity,
+  type ElectricityBill,
+} from "./electricity";
 
 export type CostSettings = {
   defaultMgmtFeePerM2: number;
@@ -55,7 +61,9 @@ export type CostBreakdown = {
   extras: { name: string; amount: number }[];
   fixedMonthly: number;
   electricity: number | null;
+  electricityBill: ElectricityBill | null;
   water: number | null;
+  waterRate: number;
   estimatedMonthly: number;
   deposit: number;
   brokerage: number;
@@ -125,21 +133,29 @@ export function calculateCosts(
     tv +
     extrasTotal;
 
-  const elecRate =
+  const customElecRate =
     listing.electricityPerKwh ?? settings.defaultElectricityPerKwh;
-  const waterRate = listing.waterPerM3 ?? settings.defaultWaterPerM3;
-  const electricityEstimated =
-    elecRate != null && listing.electricityKwhMonth != null;
-  const waterEstimated = waterRate != null && listing.waterM3Month != null;
-  const electricity = electricityEstimated
-    ? Math.round(elecRate! * listing.electricityKwhMonth!)
-    : null;
+  const kwh = listing.electricityKwhMonth;
+  let electricityBill: ElectricityBill | null = null;
+  if (kwh != null && kwh >= 0) {
+    electricityBill =
+      customElecRate != null
+        ? calculateFlatElectricity(kwh, customElecRate)
+        : calculateTieredElectricity(kwh, { includeVat: true });
+  }
+  const electricityEstimated = electricityBill != null;
+  const electricity = electricityBill?.total ?? null;
+
+  const waterRate =
+    listing.waterPerM3 ??
+    settings.defaultWaterPerM3 ??
+    RAINBOW_DEFAULTS.waterPerM3;
+  const waterEstimated = listing.waterM3Month != null;
   const water = waterEstimated
-    ? Math.round(waterRate! * listing.waterM3Month!)
+    ? Math.round(waterRate * listing.waterM3Month!)
     : null;
 
-  const estimatedMonthly =
-    fixedMonthly + n(electricity) + n(water);
+  const estimatedMonthly = fixedMonthly + n(electricity) + n(water);
 
   const deposit =
     listing.depositAmount != null
@@ -168,7 +184,9 @@ export function calculateCosts(
     extras,
     fixedMonthly,
     electricity,
+    electricityBill,
     water,
+    waterRate,
     estimatedMonthly,
     deposit,
     brokerage,

@@ -40,7 +40,7 @@ export function SettingsForm({ settings }: { settings: UserSettings }) {
       defaultCarFee: settings.defaultCarFee,
       defaultEvChargeFee: settings.defaultEvChargeFee,
       defaultElectricityPerKwh: settings.defaultElectricityPerKwh,
-      defaultWaterPerM3: settings.defaultWaterPerM3,
+      defaultWaterPerM3: settings.defaultWaterPerM3 ?? 6700,
       defaultLeaseMonths: settings.defaultLeaseMonths,
     },
   });
@@ -169,7 +169,7 @@ export function SettingsForm({ settings }: { settings: UserSettings }) {
             name="defaultElectricityPerKwh"
             render={({ field }) => (
               <MoneyInput
-                label="Điện đ/kWh (để trống = theo NN)"
+                label="Điện đ/kWh (để trống = bậc thang NN + VAT 8%)"
                 value={field.value}
                 onChange={field.onChange}
               />
@@ -180,7 +180,7 @@ export function SettingsForm({ settings }: { settings: UserSettings }) {
             name="defaultWaterPerM3"
             render={({ field }) => (
               <MoneyInput
-                label="Nước đ/m³ (để trống = theo NN)"
+                label="Nước đ/m³ (mặc định 6.700)"
                 value={field.value}
                 onChange={field.onChange}
               />
@@ -192,8 +192,9 @@ export function SettingsForm({ settings }: { settings: UserSettings }) {
             label="Số tháng thuê dự kiến"
             {...register("defaultLeaseMonths", { valueAsNumber: true })}
           />
-          <div className="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-600">
-            Đơn vị tiền tệ: <strong>VND (đ)</strong>
+          <div className="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-600 sm:col-span-2">
+            Điện để trống đơn giá → tính theo bậc thang sinh hoạt (QĐ 1279/QĐ-BCT)
+            + VAT 8%. Đơn vị tiền: <strong>VND (đ)</strong>
           </div>
         </div>
       </section>

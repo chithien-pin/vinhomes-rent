@@ -32,6 +32,8 @@ function Row({
 }
 
 export function CostBreakdown({ costs }: { costs: Costs }) {
+  const bill = costs.electricityBill;
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
       <h3 className="mb-2 font-semibold text-slate-900">Phân tích chi phí</h3>
@@ -80,11 +82,35 @@ export function CostBreakdown({ costs }: { costs: Costs }) {
             : "Chưa ước tính"
         }
         hint={
-          costs.electricityEstimated
-            ? undefined
-            : "Cần đơn giá đ/kWh + số kWh/tháng"
+          !costs.electricityEstimated
+            ? "Nhập số kWh/tháng (để trống đơn giá = bậc thang NN)"
+            : bill?.method === "tiered"
+              ? `${bill.kwh} kWh · bậc thang + VAT 8%`
+              : `${bill?.kwh ?? ""} kWh · đơn giá cố định`
         }
       />
+      {bill?.method === "tiered" && bill.lines.length > 0 && (
+        <div className="mb-2 ml-3 space-y-1 border-l-2 border-emerald-100 pl-3 text-xs text-slate-500">
+          {bill.lines.map((line) => (
+            <div key={line.label} className="flex justify-between gap-2">
+              <span>
+                {line.label}: {line.kwh} × {formatVnd(line.rate)}
+              </span>
+              <span className="tabular-nums">{formatVnd(line.amount)}</span>
+            </div>
+          ))}
+          <div className="flex justify-between gap-2">
+            <span>Chưa VAT</span>
+            <span className="tabular-nums">{formatVnd(bill.subtotal)}</span>
+          </div>
+          {bill.includeVat && (
+            <div className="flex justify-between gap-2">
+              <span>VAT 8%</span>
+              <span className="tabular-nums">{formatVnd(bill.vat)}</span>
+            </div>
+          )}
+        </div>
+      )}
       <Row
         label="Nước (ước tính)"
         value={
@@ -92,8 +118,8 @@ export function CostBreakdown({ costs }: { costs: Costs }) {
         }
         hint={
           costs.waterEstimated
-            ? undefined
-            : "Cần đơn giá đ/m³ + số m³/tháng"
+            ? `${formatVnd(costs.waterRate)}/m³`
+            : "Nhập số m³/tháng (mặc định 6.700 đ/m³)"
         }
       />
       <Row

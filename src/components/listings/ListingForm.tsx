@@ -543,7 +543,7 @@ export function ListingForm({
             name="electricityPerKwh"
             render={({ field }) => (
               <MoneyInput
-                label="Điện đ/kWh (để trống = giá NN)"
+                label="Điện đ/kWh (để trống = bậc thang + VAT)"
                 value={field.value}
                 onChange={field.onChange}
               />
@@ -570,7 +570,7 @@ export function ListingForm({
             name="waterPerM3"
             render={({ field }) => (
               <MoneyInput
-                label="Nước đ/m³ (để trống = giá NN)"
+                label="Nước đ/m³ (để trống = 6.700)"
                 value={field.value}
                 onChange={field.onChange}
               />

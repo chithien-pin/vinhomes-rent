@@ -94,7 +94,7 @@ model UserSettings {
   defaultCarFee             Int       @default(1227273)
   defaultEvChargeFee        Int       @default(165000)
   defaultElectricityPerKwh  Int?
-  defaultWaterPerM3         Int?
+  defaultWaterPerM3         Int       @default(6700)
   defaultLeaseMonths        Int       @default(12)
 }
 
