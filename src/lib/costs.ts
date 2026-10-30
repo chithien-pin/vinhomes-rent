@@ -1,5 +1,5 @@
 import type { AreaBasis } from "@prisma/client";
-import { RAINBOW_DEFAULTS } from "./constants";
+import { RAINBOW_DEFAULTS, WATER_VAT_RATE } from "./constants";
 import {
   calculateFlatElectricity,
   calculateTieredElectricity,
@@ -64,6 +64,8 @@ export type CostBreakdown = {
   electricityBill: ElectricityBill | null;
   water: number | null;
   waterRate: number;
+  waterSubtotal: number | null;
+  waterVat: number | null;
   estimatedMonthly: number;
   deposit: number;
   brokerage: number;
@@ -151,9 +153,17 @@ export function calculateCosts(
     settings.defaultWaterPerM3 ??
     RAINBOW_DEFAULTS.waterPerM3;
   const waterEstimated = listing.waterM3Month != null;
-  const water = waterEstimated
+  const waterSubtotal = waterEstimated
     ? Math.round(waterRate * listing.waterM3Month!)
     : null;
+  const waterVat =
+    waterSubtotal != null
+      ? Math.round(waterSubtotal * WATER_VAT_RATE)
+      : null;
+  const water =
+    waterSubtotal != null && waterVat != null
+      ? waterSubtotal + waterVat
+      : null;
 
   const estimatedMonthly = fixedMonthly + n(electricity) + n(water);
 
@@ -187,6 +197,8 @@ export function calculateCosts(
     electricityBill,
     water,
     waterRate,
+    waterSubtotal,
+    waterVat,
     estimatedMonthly,
     deposit,
     brokerage,

@@ -73,9 +73,11 @@ console.assert(
   `elec ${studio.electricity} != ${expectedElec}`
 );
 console.assert(studio.waterEstimated, "water estimated");
+const expectedWaterSub = 8 * 6700;
+const expectedWater = expectedWaterSub + Math.round(expectedWaterSub * 0.05);
 console.assert(
-  studio.water === 8 * 6700,
-  `water ${studio.water} != ${8 * 6700}`
+  studio.water === expectedWater,
+  `water ${studio.water} != ${expectedWater}`
 );
 
 const score = calculateWeightedScore(

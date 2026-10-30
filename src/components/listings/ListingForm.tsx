@@ -570,7 +570,7 @@ export function ListingForm({
             name="waterPerM3"
             render={({ field }) => (
               <MoneyInput
-                label="Nước đ/m³ (để trống = 6.700)"
+                label="Nước đ/m³ (để trống = 6.700 + VAT 5%)"
                 value={field.value}
                 onChange={field.onChange}
               />

@@ -126,6 +126,9 @@ export const RAINBOW_DEFAULTS = {
   motorbikeFee: 147273,
   carFee: 1227273,
   evChargeFee: 165000,
-  /** Giá nước sinh hoạt mặc định (đ/m³) */
+  /** Giá nước sinh hoạt mặc định (đ/m³, chưa VAT) */
   waterPerM3: 6700,
 } as const;
+
+/** VAT nước sinh hoạt */
+export const WATER_VAT_RATE = 0.05;

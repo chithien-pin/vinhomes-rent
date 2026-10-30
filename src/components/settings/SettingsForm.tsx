@@ -180,7 +180,7 @@ export function SettingsForm({ settings }: { settings: UserSettings }) {
             name="defaultWaterPerM3"
             render={({ field }) => (
               <MoneyInput
-                label="Nước đ/m³ (mặc định 6.700)"
+                label="Nước đ/m³ (6.700 + VAT 5%)"
                 value={field.value}
                 onChange={field.onChange}
               />
@@ -193,8 +193,8 @@ export function SettingsForm({ settings }: { settings: UserSettings }) {
             {...register("defaultLeaseMonths", { valueAsNumber: true })}
           />
           <div className="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-600 sm:col-span-2">
-            Điện để trống đơn giá → tính theo bậc thang sinh hoạt (QĐ 1279/QĐ-BCT)
-            + VAT 8%. Đơn vị tiền: <strong>VND (đ)</strong>
+            Điện để trống đơn giá → bậc thang sinh hoạt + VAT 8%. Nước mặc định
+            6.700 đ/m³ + VAT 5%. Đơn vị: <strong>VND (đ)</strong>
           </div>
         </div>
       </section>

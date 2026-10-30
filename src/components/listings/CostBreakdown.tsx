@@ -118,10 +118,26 @@ export function CostBreakdown({ costs }: { costs: Costs }) {
         }
         hint={
           costs.waterEstimated
-            ? `${formatVnd(costs.waterRate)}/m³`
-            : "Nhập số m³/tháng (mặc định 6.700 đ/m³)"
+            ? `${formatVnd(costs.waterRate)}/m³ + VAT 5%`
+            : "Nhập số m³/tháng (6.700 đ/m³ + VAT 5%)"
         }
       />
+      {costs.waterEstimated &&
+        costs.waterSubtotal != null &&
+        costs.waterVat != null && (
+          <div className="mb-2 ml-3 space-y-1 border-l-2 border-sky-100 pl-3 text-xs text-slate-500">
+            <div className="flex justify-between gap-2">
+              <span>Chưa VAT</span>
+              <span className="tabular-nums">
+                {formatVnd(costs.waterSubtotal)}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span>VAT 5%</span>
+              <span className="tabular-nums">{formatVnd(costs.waterVat)}</span>
+            </div>
+          </div>
+        )}
       <Row
         label="Ước tính / tháng"
         value={formatVnd(costs.estimatedMonthly)}
