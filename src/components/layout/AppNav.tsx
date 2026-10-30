@@ -13,8 +13,7 @@ const items = [
 
 export function AppNav() {
   const pathname = usePathname();
-  const hide =
-    pathname.includes("/edit") || pathname.startsWith("/login");
+  const hide = pathname.includes("/edit");
 
   if (hide) return null;
 

@@ -1,13 +1,10 @@
 import { AppNav } from "@/components/layout/AppNav";
-import { requireAppUser } from "@/lib/auth";
 
-export default async function AppLayout({
+export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireAppUser();
-
   return (
     <div className="min-h-dvh bg-slate-50 text-slate-900">
       <AppNav />

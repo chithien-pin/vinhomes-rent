@@ -11,8 +11,7 @@ import {
 } from "@/lib/validators";
 import type { UserSettings } from "@prisma/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signOutClient } from "@/lib/sign-out";
-import { LogOut, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -66,23 +65,13 @@ export function SettingsForm({ settings }: { settings: UserSettings }) {
     }
   }
 
-  async function signOut() {
-    await signOutClient();
-  }
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-bold md:text-2xl">Cài đặt</h1>
-          <p className="text-sm text-slate-500">
-            Trọng số điểm, đơn giá mặc định (The Rainbow), số tháng thuê dự kiến
-          </p>
-        </div>
-        <Button type="button" variant="ghost" size="sm" onClick={signOut}>
-          <LogOut className="h-4 w-4" />
-          Thoát
-        </Button>
+      <div>
+        <h1 className="text-xl font-bold md:text-2xl">Cài đặt</h1>
+        <p className="text-sm text-slate-500">
+          Trọng số điểm, đơn giá mặc định (The Rainbow), số tháng thuê dự kiến
+        </p>
       </div>
 
       <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">

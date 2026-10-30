@@ -10,8 +10,7 @@ import {
   UNIT_TYPE_LABELS,
 } from "@/lib/constants";
 import type { EnrichedListing } from "@/lib/listings";
-import { signOutClient } from "@/lib/sign-out";
-import { LogOut, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
@@ -19,10 +18,8 @@ type SortKey = "updated" | "rent" | "total" | "score" | "viewed";
 
 export function HomeClient({
   initialListings,
-  email,
 }: {
   initialListings: EnrichedListing[];
-  email: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -98,10 +95,6 @@ export function HomeClient({
     }
   }
 
-  async function signOut() {
-    await signOutClient();
-  }
-
   function toggleSelect(id: string) {
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
@@ -118,17 +111,12 @@ export function HomeClient({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold md:text-2xl">Căn hộ đang xem</h1>
-          <p className="text-sm text-slate-500">{email}</p>
+          <p className="text-sm text-slate-500">Dùng cá nhân</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={signOut} title="Đăng xuất">
-            <LogOut className="h-4 w-4" />
-          </Button>
-          <Button onClick={createListing} loading={creating} size="sm">
-            <Plus className="h-4 w-4" />
-            Thêm
-          </Button>
-        </div>
+        <Button onClick={createListing} loading={creating} size="sm">
+          <Plus className="h-4 w-4" />
+          Thêm
+        </Button>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

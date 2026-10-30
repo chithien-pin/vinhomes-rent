@@ -14,9 +14,6 @@ export default async function HomePage() {
   const enriched = listings.map((l) => enrichListing(l, user.settings!));
 
   return (
-    <HomeClient
-      initialListings={JSON.parse(JSON.stringify(enriched))}
-      email={user.email}
-    />
+    <HomeClient initialListings={JSON.parse(JSON.stringify(enriched))} />
   );
 }

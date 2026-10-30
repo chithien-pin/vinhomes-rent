@@ -16,10 +16,10 @@ Web app mobile-first để ghi nhận căn hộ đang xem, tính chi phí cư d�
 - Node.js 20+ (khuyến nghị 22)
 - Tài khoản [Supabase](https://supabase.com)
 
-## Đăng nhập (hiện tại)
+## Dùng cá nhân
 
-Một tài khoản cố định: **`admin` / `admin`** (đổi bằng `ADMIN_USERNAME` / `ADMIN_PASSWORD`).  
-App dùng **user đầu tiên** trong database (dữ liệu bạn đã có). Khi cần nhiều user / Google / magic link, báo lại để bật lại.
+Không có đăng nhập. App mở thẳng danh sách và dùng **user đầu tiên** trong database.  
+Link không public — ai có URL đều xem/sửa được. Khi cần auth lại, báo sau.
 
 ## 1. Tạo project Supabase
 
@@ -27,8 +27,7 @@ App dùng **user đầu tiên** trong database (dữ liệu bạn đã có). Khi
 2. **Storage**: chạy SQL trong [`supabase/storage-policies.sql`](supabase/storage-policies.sql).
 3. Biến môi trường:
    - `DATABASE_URL` / `DIRECT_URL` (Database → Connect → Prisma)
-   - `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (Settings → API) — service role để upload ảnh
-   - `ADMIN_*` + `SESSION_SECRET`
+   - `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (Settings → API)
 
 ## 2. Chạy local
 
@@ -41,7 +40,7 @@ npx prisma migrate dev --name init
 npm run dev
 ```
 
-Mở [http://localhost:3000](http://localhost:3000) → đăng nhập `admin` / `admin` → **Tải 3 căn mẫu** (nếu chưa có data).
+Mở [http://localhost:3000](http://localhost:3000) → dùng ngay. Nếu chưa có data, bấm **Tải 3 căn mẫu**.
 
 ### Scripts
 
