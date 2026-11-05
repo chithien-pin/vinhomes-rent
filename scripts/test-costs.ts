@@ -35,7 +35,7 @@ const studioInput = {
     brokerageFee: 3_250_000,
     rentIncludesMgmt: false,
     mgmtFeePerM2: null,
-    mgmtFeeBasis: "NET",
+    mgmtFeeBasis: "NET" as const,
     netAreaM2: 29,
     grossAreaM2: 32,
     bikeCount: 0,
@@ -69,6 +69,7 @@ console.assert(
 const expectedMgmt = Math.round(29 * RAINBOW_DEFAULTS.mgmtFeePerM2);
 console.assert(studio.mgmtFee === expectedMgmt, `mgmt ${studio.mgmtFee}`);
 console.assert(normalizeCarFee(1_227_273) === 2_000_000, "legacy car fee");
+console.assert(inferMgmtZone({ title: "Căn mới" }) === null, "blank zone");
 console.assert(
   inferMgmtZone({
     title: "Glory Height",

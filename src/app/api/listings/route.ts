@@ -1,6 +1,6 @@
 import { requireApiUser } from "@/lib/auth";
 import { apiError } from "@/lib/api";
-import { listingInclude } from "@/lib/listings";
+import { decimalToNumber, listingInclude } from "@/lib/listings";
 import { prisma } from "@/lib/prisma";
 import { listingFormSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
@@ -105,14 +105,28 @@ export async function POST(request: Request) {
         ? body.title.trim()
         : "Căn mới";
 
+    const latest = await prisma.listing.findFirst({
+      where: { userId: user.id },
+      orderBy: { updatedAt: "desc" },
+    });
     const listing = await prisma.listing.create({
       data: {
         userId: user.id,
         title,
-        mgmtFeePerM2: settings.defaultMgmtFeePerM2,
+        status: "INTERESTED",
+        furnishing: "BASIC",
+        contractType: "OWNER",
+        depositMonths: decimalToNumber(latest?.depositMonths) ?? 2,
+        minLeaseMonths: latest?.minLeaseMonths ?? 12,
+        leaseMonths: latest?.leaseMonths ?? settings.defaultLeaseMonths,
+        motorbikeCount: latest?.motorbikeCount ?? 2,
+        motorbikeFee: latest?.motorbikeFee ?? settings.defaultMotorbikeFee,
+        electricityKwhMonth:
+          decimalToNumber(latest?.electricityKwhMonth) ?? 271,
+        waterM3Month: decimalToNumber(latest?.waterM3Month) ?? 9,
+        internetFee: latest?.internetFee ?? 240_000,
         mgmtFeeBasis: settings.defaultMgmtFeeBasis,
         bikeFee: settings.defaultBikeFee,
-        motorbikeFee: settings.defaultMotorbikeFee,
         carFee: settings.defaultCarFee,
         evChargeFee: settings.defaultEvChargeFee,
         furnitureItems: [],

@@ -250,7 +250,7 @@ export function inferMgmtZone(input: {
   mgmtFeePerM2?: number | null;
   title?: string | null;
   project?: string | null;
-}): MgmtZoneId {
+}): MgmtZoneId | null {
   if (input.mgmtZone && mgmtZoneById(input.mgmtZone)) {
     return input.mgmtZone as MgmtZoneId;
   }
@@ -262,8 +262,9 @@ export function inferMgmtZone(input: {
   if (input.mgmtFeePerM2 != null) {
     const byFee = MGMT_ZONES.filter((zone) => zone.perM2 === input.mgmtFeePerM2);
     if (byFee.length === 1) return byFee[0].id;
+    return "custom";
   }
-  return "custom";
+  return null;
 }
 
 export function mgmtZoneOptionLabel(zone: (typeof MGMT_ZONES)[number]) {

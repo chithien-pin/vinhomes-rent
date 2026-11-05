@@ -34,6 +34,18 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 
+const UNIT_BEDROOMS: Record<ListingFormValues["unitType"], number> = {
+  STUDIO: 0,
+  ONE_BR: 1,
+  ONE_BR_PLUS: 1,
+  TWO_BR: 2,
+  TWO_BR_PLUS: 2,
+  THREE_BR: 3,
+  OTHER: 0,
+};
+
+const QUICK_FURNITURE = ["stove", "curtains", "aircon", "bed", "waterHeater"];
+
 export function ListingForm({
   listingId,
   userId,
@@ -60,6 +72,7 @@ export function ListingForm({
     handleSubmit,
     watch,
     setValue,
+    getValues,
     reset,
     formState: { errors, isDirty },
   } = useForm<ListingFormValues>({
@@ -152,19 +165,59 @@ export function ListingForm({
   }
 
   const furniture = values.furnitureItems ?? [];
-  const mgmtZone = mgmtZoneById(values.mgmtZone) ?? MGMT_ZONES[MGMT_ZONES.length - 1];
-  const tableRate = mgmtZone.perM2;
+  const mgmtZone = mgmtZoneById(values.mgmtZone);
+  const tableRate = mgmtZone?.perM2 ?? null;
   const savedRate = values.mgmtFeePerM2 ?? null;
   const rateDiffers = tableRate != null && savedRate !== tableRate;
-  const showRateInput = tableRate == null || rateDiffers || editRate;
+  const showRateInput = mgmtZone != null && (tableRate == null || rateDiffers || editRate);
   const areaBasisLabel = values.mgmtFeeBasis === "GROSS" ? "tim tường" : "thông thủy";
 
   function selectZone(id: string) {
     setEditRate(false);
+    if (!id) {
+      setValue("mgmtZone", null, { shouldDirty: true });
+      return;
+    }
     setValue("mgmtZone", id, { shouldDirty: true });
     const zone = mgmtZoneById(id);
     if (zone?.perM2 != null) {
       setValue("mgmtFeePerM2", zone.perM2, { shouldDirty: true });
+    }
+    const project = getValues("project")?.trim() ?? "";
+    const knownNames = new Set([
+      ...MGMT_ZONES.map((item) => item.label),
+      "Masteri",
+      "Bevery Solari",
+      "Beverly Solari",
+    ]);
+    if (!project || knownNames.has(project)) {
+      const next =
+        id === "mas" ? "Masteri" : id === "custom" ? "" : (zone?.label ?? "");
+      if (next !== project) setValue("project", next, { shouldDirty: true });
+    }
+    const title = getValues("title")?.trim() ?? "";
+    if (!title || title === "Căn mới") {
+      const nextTitle = id === "mas" ? "Masteri" : zone?.label;
+      if (nextTitle && id !== "custom") {
+        setValue("title", nextTitle, { shouldDirty: true });
+      }
+    }
+  }
+
+  function selectUnitType(unitType: ListingFormValues["unitType"]) {
+    setValue("unitType", unitType, { shouldDirty: true });
+    const beds = UNIT_BEDROOMS[unitType];
+    if (unitType !== "OTHER") setValue("bedrooms", beds, { shouldDirty: true });
+  }
+
+  function toggleFurniture(key: string) {
+    const checked = furniture.includes(key);
+    const next = checked
+      ? furniture.filter((item) => item !== key)
+      : [...furniture, key];
+    setValue("furnitureItems", next, { shouldDirty: true });
+    if (!checked && getValues("furnishing") === "NONE") {
+      setValue("furnishing", "BASIC", { shouldDirty: true });
     }
   }
 
@@ -204,12 +257,21 @@ export function ListingForm({
 
       <h1 className="text-xl font-bold">Sửa căn hộ</h1>
 
-      <Accordion title="a. Thông tin chung" defaultOpen>
-        <Input label="Tên gọi / ghi chú *" {...register("title")} error={errors.title?.message} />
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+        <Input label="Tên gọi *" {...register("title")} error={errors.title?.message} />
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input label="Dự án" {...register("project")} />
-          <Input label="Tòa / block" {...register("building")} />
-          <Input label="Số căn" {...register("unitNumber")} />
+          <Select
+            label="Khu — phí quản lý (đã gồm VAT)"
+            options={[
+              { value: "", label: "Chọn khu" },
+              ...MGMT_ZONES.map((zone) => ({
+                value: zone.id,
+                label: mgmtZoneOptionLabel(zone),
+              })),
+            ]}
+            value={values.mgmtZone ?? ""}
+            onChange={(e) => selectZone(e.target.value)}
+          />
           <Select
             label="Trạng thái"
             options={Object.entries(LISTING_STATUS_LABELS).map(([value, label]) => ({
@@ -218,32 +280,32 @@ export function ListingForm({
             }))}
             {...register("status")}
           />
-        </div>
-        <details className="rounded-xl border border-slate-200 px-3 py-2">
-          <summary className="cursor-pointer text-sm font-medium text-slate-600">
-            Địa chỉ, link, liên hệ
-          </summary>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <Input label="Địa chỉ" {...register("address")} />
-            <Input label="Link tin đăng" {...register("listingUrl")} />
-            <Input label="Người liên hệ" {...register("contactName")} />
-            <Input label="SĐT" {...register("contactPhone")} inputMode="tel" />
-            <Input label="Ngày xem" type="date" {...register("viewedAt")} />
-          </div>
-        </details>
-      </Accordion>
-
-      <Accordion title="b. Thông tin căn">
-        <div className="grid gap-3 sm:grid-cols-2">
+          <Input label="Tòa / block" {...register("building")} />
+          <Controller
+            control={control}
+            name="floor"
+            render={({ field }) => (
+              <Input
+                label="Tầng"
+                type="number"
+                value={field.value ?? ""}
+                onChange={(e) =>
+                  field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                }
+              />
+            )}
+          />
           <Select
             label="Loại căn"
             options={Object.entries(UNIT_TYPE_LABELS).map(([value, label]) => ({
               value,
               label,
             }))}
-            {...register("unitType")}
+            value={values.unitType}
+            onChange={(e) =>
+              selectUnitType(e.target.value as ListingFormValues["unitType"])
+            }
           />
-          <Input label="Ghi chú loại căn" {...register("unitTypeNote")} />
           <Controller
             control={control}
             name="netAreaM2"
@@ -254,13 +316,220 @@ export function ListingForm({
                 step="0.01"
                 value={field.value ?? ""}
                 onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ? null : Number(e.target.value)
-                  )
+                  field.onChange(e.target.value === "" ? null : Number(e.target.value))
                 }
               />
             )}
           />
+        </div>
+        {!mgmtZone && (
+          <p className="-mt-2 text-xs text-slate-500">
+            Chọn khu để điền phí quản lý. Masteri nhập đơn giá của căn.
+          </p>
+        )}
+        {mgmtZone?.note && <p className="-mt-2 text-xs text-slate-500">{mgmtZone.note}</p>}
+        {tableRate != null && !rateDiffers && !editRate && (
+          <div className="-mt-2 flex items-center justify-between gap-2 text-xs text-slate-500">
+            <span>
+              {formatVnd(tableRate)}/m² × {areaBasisLabel} · đã gồm VAT
+            </span>
+            <button
+              type="button"
+              className="font-medium text-emerald-700"
+              onClick={() => setEditRate(true)}
+            >
+              Nhập đơn giá khác
+            </button>
+          </div>
+        )}
+        {rateDiffers && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <span>
+              Bảng {mgmtZone?.label} là {formatVnd(tableRate)}/m². Căn này đang để{" "}
+              {formatVnd(savedRate)}/m².
+            </span>
+            <button
+              type="button"
+              className="font-medium text-emerald-700"
+              onClick={() => {
+                if (tableRate == null) return;
+                setEditRate(false);
+                setValue("mgmtFeePerM2", tableRate, { shouldDirty: true });
+              }}
+            >
+              Dùng {formatVnd(tableRate)}
+            </button>
+          </div>
+        )}
+        {showRateInput && (
+          <Controller
+            control={control}
+            name="mgmtFeePerM2"
+            render={({ field }) => (
+              <MoneyInput
+                label={
+                  mgmtZone?.id === "mas"
+                    ? "Đơn giá căn này (đ/m², đã gồm VAT)"
+                    : "Đơn giá (đ/m², đã gồm VAT)"
+                }
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        )}
+
+        <div>
+          <p className="mb-2 text-sm font-medium text-slate-700">Số WC</p>
+          <div className="flex gap-2">
+            {[1, 2].map((count) => (
+              <button
+                key={count}
+                type="button"
+                onClick={() => setValue("bathrooms", count, { shouldDirty: true })}
+                className={`h-10 flex-1 rounded-xl border text-sm ${
+                  values.bathrooms === count
+                    ? "border-emerald-600 bg-emerald-50 font-medium text-emerald-800"
+                    : "border-slate-200 text-slate-700"
+                }`}
+              >
+                {count} WC
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Input label="View" {...register("viewNote")} placeholder="Nội khu" />
+
+        <div>
+          <p className="mb-2 text-sm font-medium text-slate-700">Nội thất</p>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_FURNITURE.map((key) => {
+              const item = FURNITURE_ITEMS.find((entry) => entry.key === key);
+              if (!item) return null;
+              const checked = furniture.includes(item.key);
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => toggleFurniture(item.key)}
+                  className={`rounded-full border px-3 py-1.5 text-sm ${
+                    checked
+                      ? "border-emerald-600 bg-emerald-50 font-medium text-emerald-800"
+                      : "border-slate-200 text-slate-700"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Controller
+            control={control}
+            name="rentMonthly"
+            render={({ field }) => (
+              <MoneyInput label="Giá thuê / tháng" value={field.value} onChange={field.onChange} />
+            )}
+          />
+          <Controller
+            control={control}
+            name="depositMonths"
+            render={({ field }) => (
+              <Input
+                label="Cọc (số tháng)"
+                type="number"
+                step="0.5"
+                value={field.value ?? ""}
+                onChange={(e) =>
+                  field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                }
+              />
+            )}
+          />
+        </div>
+        <p className="-mt-2 text-sm text-slate-600">
+          Tiền cọc{" "}
+          <span className="font-medium text-slate-900">
+            {formatVnd(
+              values.depositMonths != null && values.rentMonthly != null
+                ? Math.round(values.depositMonths * values.rentMonthly)
+                : null
+            )}
+          </span>
+        </p>
+
+        <Controller
+          control={control}
+          name="motorbikeCount"
+          render={({ field }) => (
+            <QtyStepper
+              label="Xe máy"
+              hint={`${formatVnd(values.motorbikeFee ?? settings.defaultMotorbikeFee)}/tháng`}
+              value={field.value ?? 0}
+              onChange={field.onChange}
+            />
+          )}
+        />
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Controller
+            control={control}
+            name="electricityKwhMonth"
+            render={({ field }) => (
+              <Input
+                label="Điện (kWh/tháng)"
+                type="number"
+                value={field.value ?? ""}
+                onChange={(e) =>
+                  field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                }
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="waterM3Month"
+            render={({ field }) => (
+              <Input
+                label="Nước (m³/tháng)"
+                type="number"
+                value={field.value ?? ""}
+                onChange={(e) =>
+                  field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                }
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="internetFee"
+            render={({ field }) => (
+              <MoneyInput label="Internet" value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-3">
+          <div>
+            <p className="text-xs text-emerald-800">Ước tính / tháng</p>
+            <p className="text-lg font-semibold text-emerald-950">
+              {formatVnd(costs.estimatedMonthly)}
+            </p>
+          </div>
+          <p className="text-right text-xs text-emerald-800">
+            Cọc {formatVnd(costs.deposit)}
+          </p>
+        </div>
+      </section>
+
+      <Accordion title="Chi tiết căn">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input label="Dự án" {...register("project")} />
+          <Input label="Số căn" {...register("unitNumber")} />
+          <Input label="Ghi chú loại căn" {...register("unitTypeNote")} />
           <Controller
             control={control}
             name="grossAreaM2"
@@ -269,22 +538,6 @@ export function ListingForm({
                 label="Diện tích tim tường (m²)"
                 type="number"
                 step="0.01"
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ? null : Number(e.target.value)
-                  )
-                }
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="floor"
-            render={({ field }) => (
-              <Input
-                label="Tầng"
-                type="number"
                 value={field.value ?? ""}
                 onChange={(e) =>
                   field.onChange(
@@ -306,7 +559,11 @@ export function ListingForm({
             options={DIRECTIONS.map((d) => ({ value: d, label: d }))}
             {...register("balconyDirection")}
           />
-          <Input label="View" {...register("viewNote")} />
+          <Input label="Địa chỉ" {...register("address")} />
+          <Input label="Link tin đăng" {...register("listingUrl")} />
+          <Input label="Người liên hệ" {...register("contactName")} />
+          <Input label="SĐT" {...register("contactPhone")} inputMode="tel" />
+          <Input label="Ngày xem" type="date" {...register("viewedAt")} />
           <Controller
             control={control}
             name="bedrooms"
@@ -406,178 +663,12 @@ export function ListingForm({
         </div>
       </Accordion>
 
-      <Accordion title="c. Giá thuê & chi phí" defaultOpen>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Controller
-            control={control}
-            name="rentMonthly"
-            render={({ field }) => (
-              <MoneyInput
-                label="Giá thuê / tháng"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="depositMonths"
-            render={({ field }) => (
-              <Input
-                label="Cọc (số tháng)"
-                type="number"
-                step="0.5"
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ? null : Number(e.target.value)
-                  )
-                }
-              />
-            )}
-          />
-        </div>
-        <p className="text-sm text-slate-600">
-          Tiền cọc{" "}
-          <span className="font-medium text-slate-900">
-            {formatVnd(
-              values.depositMonths != null && values.rentMonthly != null
-                ? Math.round(values.depositMonths * values.rentMonthly)
-                : null
-            )}
-          </span>
-          {values.depositMonths != null && values.rentMonthly != null
-            ? ` · ${values.depositMonths} tháng × giá thuê`
-            : ""}
-        </p>
+      <Accordion title="Chi phí khác">
         <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-sm">
           <input type="checkbox" {...register("rentIncludesMgmt")} className="accent-emerald-600" />
           Giá thuê đã gồm phí quản lý
         </label>
-
-        <Select
-          label="Phí quản lý (đã gồm VAT)"
-          options={MGMT_ZONES.map((zone) => ({
-            value: zone.id,
-            label: mgmtZoneOptionLabel(zone),
-          }))}
-          value={values.mgmtZone || "custom"}
-          onChange={(e) => selectZone(e.target.value)}
-        />
-        {mgmtZone.note && (
-          <p className="-mt-2 text-xs text-slate-500">{mgmtZone.note}</p>
-        )}
-        {tableRate != null && !rateDiffers && !editRate && (
-          <div className="-mt-2 flex items-center justify-between gap-2 text-xs text-slate-500">
-            <span>
-              {formatVnd(tableRate)}/m² × {areaBasisLabel} · đã gồm VAT
-            </span>
-            <button
-              type="button"
-              className="font-medium text-emerald-700"
-              onClick={() => setEditRate(true)}
-            >
-              Nhập đơn giá khác
-            </button>
-          </div>
-        )}
-        {rateDiffers && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            <span>
-              Bảng {mgmtZone.label} là {formatVnd(tableRate)}/m². Căn này đang để{" "}
-              {formatVnd(savedRate)}/m².
-            </span>
-            <button
-              type="button"
-              className="font-medium text-emerald-700"
-              onClick={() => {
-                if (tableRate == null) return;
-                setEditRate(false);
-                setValue("mgmtFeePerM2", tableRate, { shouldDirty: true });
-              }}
-            >
-              Dùng {formatVnd(tableRate)}
-            </button>
-          </div>
-        )}
-        {showRateInput && (
-          <Controller
-            control={control}
-            name="mgmtFeePerM2"
-            render={({ field }) => (
-              <MoneyInput
-                label={
-                  mgmtZone.id === "mas"
-                    ? "Đơn giá căn này (đ/m², đã gồm VAT)"
-                    : "Đơn giá (đ/m², đã gồm VAT)"
-                }
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-        )}
-
-        <Controller
-          control={control}
-          name="motorbikeCount"
-          render={({ field }) => (
-            <QtyStepper
-              label="Xe máy"
-              hint={`${formatVnd(values.motorbikeFee ?? settings.defaultMotorbikeFee)}/tháng`}
-              value={field.value ?? 0}
-              onChange={field.onChange}
-            />
-          )}
-        />
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Controller
-            control={control}
-            name="electricityKwhMonth"
-            render={({ field }) => (
-              <Input
-                label="Điện (kWh/tháng)"
-                type="number"
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ? null : Number(e.target.value)
-                  )
-                }
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="waterM3Month"
-            render={({ field }) => (
-              <Input
-                label="Nước (m³/tháng)"
-                type="number"
-                value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(
-                    e.target.value === "" ? null : Number(e.target.value)
-                  )
-                }
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="internetFee"
-            render={({ field }) => (
-              <MoneyInput label="Internet" value={field.value} onChange={field.onChange} />
-            )}
-          />
-        </div>
-
-        <details className="rounded-xl border border-slate-200 px-3 py-2">
-          <summary className="cursor-pointer text-sm font-medium text-slate-600">
-            Đơn giá xe máy, phí khác
-          </summary>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Controller
             control={control}
             name="leaseMonths"
@@ -663,14 +754,13 @@ export function ListingForm({
             </div>
           ))}
         </div>
-        </details>
       </Accordion>
 
-      <Accordion title="d. Ước tính tổng chi phí" defaultOpen>
+      <Accordion title="Ước tính chi phí">
         <CostBreakdown costs={costs} />
       </Accordion>
 
-      <Accordion title="e. Ưu / nhược & chấm điểm">
+      <Accordion title="Ưu / nhược & chấm điểm">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -751,7 +841,7 @@ export function ListingForm({
         <Textarea label="Ghi chú tự do" {...register("notes")} rows={4} />
       </Accordion>
 
-      <Accordion title="f. Hình ảnh">
+      <Accordion title="Hình ảnh">
         <PhotoManager
           listingId={listingId}
           userId={userId}
