@@ -28,11 +28,10 @@ console.assert(
   `VAT total ${billWithVat.total}`
 );
 
-const studio = calculateCosts(
-  {
+const studioInput = {
     rentMonthly: 6_500_000,
     depositMonths: 2,
-    depositAmount: null,
+    depositAmount: null as number | null,
     brokerageFee: 3_250_000,
     rentIncludesMgmt: false,
     mgmtFeePerM2: null,
@@ -55,10 +54,18 @@ const studio = calculateCosts(
     tvFee: null,
     leaseMonths: 12,
     extras: [],
-  },
+};
+const studio = calculateCosts(studioInput, settings);
+
+console.assert(studio.deposit === 13_000_000, `deposit ${studio.deposit}`);
+const staleDeposit = calculateCosts(
+  { ...studioInput, depositAmount: 1 },
   settings
 );
-
+console.assert(
+  staleDeposit.deposit === 13_000_000,
+  "months override stored deposit amount"
+);
 const expectedMgmt = Math.round(29 * RAINBOW_DEFAULTS.mgmtFeePerM2);
 console.assert(studio.mgmtFee === expectedMgmt, `mgmt ${studio.mgmtFee}`);
 console.assert(normalizeCarFee(1_227_273) === 2_000_000, "legacy car fee");

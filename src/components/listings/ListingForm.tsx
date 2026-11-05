@@ -437,6 +437,19 @@ export function ListingForm({
             )}
           />
         </div>
+        <p className="text-sm text-slate-600">
+          Tiền cọc{" "}
+          <span className="font-medium text-slate-900">
+            {formatVnd(
+              values.depositMonths != null && values.rentMonthly != null
+                ? Math.round(values.depositMonths * values.rentMonthly)
+                : null
+            )}
+          </span>
+          {values.depositMonths != null && values.rentMonthly != null
+            ? ` · ${values.depositMonths} tháng × giá thuê`
+            : ""}
+        </p>
         <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-sm">
           <input type="checkbox" {...register("rentIncludesMgmt")} className="accent-emerald-600" />
           Giá thuê đã gồm phí quản lý
@@ -562,7 +575,7 @@ export function ListingForm({
 
         <details className="rounded-xl border border-slate-200 px-3 py-2">
           <summary className="cursor-pointer text-sm font-medium text-slate-600">
-            Cọc, đơn giá xe máy, phí khác
+            Đơn giá xe máy, phí khác
           </summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Controller
@@ -578,17 +591,6 @@ export function ListingForm({
                     e.target.value === "" ? null : Number(e.target.value)
                   )
                 }
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="depositAmount"
-            render={({ field }) => (
-              <MoneyInput
-                label="Cọc theo số tiền (ưu tiên hơn tháng)"
-                value={field.value}
-                onChange={field.onChange}
               />
             )}
           />

@@ -191,7 +191,10 @@ export function formValuesToPrismaData(values: ListingFormValues) {
       : null,
     rentMonthly: values.rentMonthly,
     depositMonths: values.depositMonths,
-    depositAmount: values.depositAmount,
+    depositAmount:
+      values.depositMonths != null && values.rentMonthly != null
+        ? Math.round(values.depositMonths * values.rentMonthly)
+        : values.depositAmount,
     paymentCycle: values.paymentCycle,
     brokerageFee: values.brokerageFee,
     rentIncludesMgmt: values.rentIncludesMgmt,

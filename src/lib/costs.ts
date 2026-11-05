@@ -180,9 +180,9 @@ export function calculateCosts(
   const estimatedMonthly = fixedMonthly + n(electricity) + n(water);
 
   const deposit =
-    listing.depositAmount != null
-      ? listing.depositAmount
-      : Math.round(n(listing.depositMonths) * rent);
+    listing.depositMonths != null
+      ? Math.round(listing.depositMonths * rent)
+      : n(listing.depositAmount);
   const brokerage = n(listing.brokerageFee);
   const moveInCost = deposit + rent + brokerage;
 
