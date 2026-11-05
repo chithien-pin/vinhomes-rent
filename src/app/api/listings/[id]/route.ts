@@ -82,7 +82,7 @@ export async function PUT(request: Request, { params }: Params) {
         },
         include: listingInclude,
       });
-    });
+    }, { timeout: 20_000 });
 
     return NextResponse.json({ listing });
   } catch (error) {

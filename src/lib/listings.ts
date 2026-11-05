@@ -5,7 +5,8 @@ import type {
   ListingPoint,
   UserSettings,
 } from "@prisma/client";
-import { calculateCosts, type CostBreakdown } from "./costs";
+import { calculateCosts, normalizeCarFee, type CostBreakdown } from "./costs";
+import { inferMgmtZone } from "./constants";
 import { calculateWeightedScore } from "./scores";
 import type { ListingFormValues } from "./validators";
 
@@ -110,12 +111,18 @@ export function listingToFormValues(
     rentIncludesMgmt: listing.rentIncludesMgmt,
     mgmtFeePerM2: listing.mgmtFeePerM2,
     mgmtFeeBasis: listing.mgmtFeeBasis,
+    mgmtZone: inferMgmtZone({
+      mgmtZone: listing.mgmtZone,
+      mgmtFeePerM2: listing.mgmtFeePerM2,
+      title: listing.title,
+      project: listing.project,
+    }),
     bikeCount: listing.bikeCount,
     bikeFee: listing.bikeFee,
     motorbikeCount: listing.motorbikeCount,
     motorbikeFee: listing.motorbikeFee,
     carCount: listing.carCount,
-    carFee: listing.carFee,
+    carFee: listing.carFee == null ? null : normalizeCarFee(listing.carFee),
     evChargeCount: listing.evChargeCount,
     evChargeFee: listing.evChargeFee,
     electricityPerKwh: listing.electricityPerKwh,
@@ -190,12 +197,13 @@ export function formValuesToPrismaData(values: ListingFormValues) {
     rentIncludesMgmt: values.rentIncludesMgmt,
     mgmtFeePerM2: values.mgmtFeePerM2,
     mgmtFeeBasis: values.mgmtFeeBasis,
+    mgmtZone: emptyToNull(values.mgmtZone),
     bikeCount: values.bikeCount ?? 0,
     bikeFee: values.bikeFee,
     motorbikeCount: values.motorbikeCount ?? 0,
     motorbikeFee: values.motorbikeFee,
     carCount: values.carCount ?? 0,
-    carFee: values.carFee,
+    carFee: values.carFee == null ? null : normalizeCarFee(values.carFee),
     evChargeCount: values.evChargeCount ?? 0,
     evChargeFee: values.evChargeFee,
     electricityPerKwh: values.electricityPerKwh,

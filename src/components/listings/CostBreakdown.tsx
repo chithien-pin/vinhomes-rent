@@ -43,8 +43,8 @@ export function CostBreakdown({ costs }: { costs: Costs }) {
         value={formatVnd(costs.mgmtFee)}
         hint={
           costs.mgmtFeeIncludedInRent
-            ? "Đã gồm trong giá thuê"
-            : "Cộng thêm vào tổng"
+            ? "Đã gồm trong giá thuê · đơn giá đã gồm VAT"
+            : "Cộng thêm vào tổng · đơn giá đã gồm VAT"
         }
       />
       <Row label="Gửi xe (tổng)" value={formatVnd(costs.parkingTotal)} />
@@ -63,9 +63,11 @@ export function CostBreakdown({ costs }: { costs: Costs }) {
           )}
         </div>
       )}
-      <Row label="Sạc xe điện" value={formatVnd(costs.evCharge)} />
+      {costs.evCharge > 0 && (
+        <Row label="Sạc xe điện" value={formatVnd(costs.evCharge)} />
+      )}
       <Row label="Internet" value={formatVnd(costs.internet)} />
-      <Row label="Truyền hình" value={formatVnd(costs.tv)} />
+      {costs.tv > 0 && <Row label="Truyền hình" value={formatVnd(costs.tv)} />}
       {costs.extras.map((e) => (
         <Row key={e.name + e.amount} label={e.name} value={formatVnd(e.amount)} />
       ))}
@@ -144,11 +146,15 @@ export function CostBreakdown({ costs }: { costs: Costs }) {
         strong
       />
       <Row label="Tiền cọc" value={formatVnd(costs.deposit)} />
-      <Row label="Phí môi giới" value={formatVnd(costs.brokerage)} />
+      {costs.brokerage > 0 && (
+        <Row label="Phí môi giới" value={formatVnd(costs.brokerage)} />
+      )}
       <Row
         label="Chi phí vào ở"
         value={formatVnd(costs.moveInCost)}
-        hint="Cọc + tháng đầu + môi giới"
+        hint={
+          costs.brokerage > 0 ? "Cọc + tháng đầu + môi giới" : "Cọc + tháng đầu"
+        }
         strong
       />
       <Row

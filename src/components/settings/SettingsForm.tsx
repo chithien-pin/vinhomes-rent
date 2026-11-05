@@ -70,7 +70,7 @@ export function SettingsForm({ settings }: { settings: UserSettings }) {
       <div>
         <h1 className="text-xl font-bold md:text-2xl">Cài đặt</h1>
         <p className="text-sm text-slate-500">
-          Trọng số điểm, đơn giá mặc định (The Rainbow), số tháng thuê dự kiến
+          Trọng số điểm, đơn giá mặc định, số tháng thuê dự kiến. Phí quản lý chọn theo khu trên từng căn (đã gồm VAT).
         </p>
       </div>
 

@@ -1,5 +1,10 @@
 import type { AreaBasis } from "@prisma/client";
-import { RAINBOW_DEFAULTS, WATER_VAT_RATE } from "./constants";
+import {
+  CAR_PARKING_MONTH,
+  LEGACY_CAR_FEE,
+  RAINBOW_DEFAULTS,
+  WATER_VAT_RATE,
+} from "./constants";
 import {
   calculateFlatElectricity,
   calculateTieredElectricity,
@@ -89,6 +94,11 @@ function resolveFee(
   return n(defaultValue);
 }
 
+/** 2 triệu/tháng. Đơn giá cũ 1.227.273 được đổi sang mức này. */
+export function normalizeCarFee(value: number): number {
+  return value === LEGACY_CAR_FEE ? CAR_PARKING_MONTH : value;
+}
+
 export function calculateCosts(
   listing: CostListingInput,
   settings: CostSettings
@@ -111,7 +121,9 @@ export function calculateCosts(
     listing.motorbikeFee,
     settings.defaultMotorbikeFee
   );
-  const carFee = resolveFee(listing.carFee, settings.defaultCarFee);
+  const carFee = normalizeCarFee(
+    resolveFee(listing.carFee, settings.defaultCarFee)
+  );
   const evFee = resolveFee(listing.evChargeFee, settings.defaultEvChargeFee);
 
   const parkingBike = listing.bikeCount * bikeFee;

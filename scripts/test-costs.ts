@@ -1,7 +1,7 @@
-import { calculateCosts } from "../src/lib/costs";
+import { inferMgmtZone, RAINBOW_DEFAULTS } from "../src/lib/constants";
+import { calculateCosts, normalizeCarFee } from "../src/lib/costs";
 import { calculateTieredElectricity } from "../src/lib/electricity";
 import { calculateWeightedScore } from "../src/lib/scores";
-import { RAINBOW_DEFAULTS } from "../src/lib/constants";
 
 const settings = {
   defaultMgmtFeePerM2: RAINBOW_DEFAULTS.mgmtFeePerM2,
@@ -59,8 +59,37 @@ const studio = calculateCosts(
   settings
 );
 
-const expectedMgmt = Math.round(29 * 15400);
+const expectedMgmt = Math.round(29 * RAINBOW_DEFAULTS.mgmtFeePerM2);
 console.assert(studio.mgmtFee === expectedMgmt, `mgmt ${studio.mgmtFee}`);
+console.assert(normalizeCarFee(1_227_273) === 2_000_000, "legacy car fee");
+console.assert(
+  inferMgmtZone({
+    title: "Glory Height",
+    project: "Rainbow",
+    mgmtFeePerM2: 18150,
+  }) === "glory-height",
+  "glory zone"
+);
+console.assert(
+  inferMgmtZone({
+    title: "Origami S10.05",
+    project: "Origami",
+    mgmtFeePerM2: 17000,
+  }) === "origami",
+  "origami zone"
+);
+console.assert(
+  inferMgmtZone({ title: "Masteri đang ở", mgmtFeePerM2: 4200 }) === "mas",
+  "mas zone"
+);
+console.assert(
+  inferMgmtZone({
+    title: "Bevery Solari BS16",
+    project: "Bevery Solari",
+    mgmtFeePerM2: 17380,
+  }) === "beverly-solari",
+  "beverly zone"
+);
 console.assert(studio.electricityEstimated, "electricity estimated via tiers");
 console.assert(
   studio.electricityBill?.method === "tiered",

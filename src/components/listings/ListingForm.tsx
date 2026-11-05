@@ -16,18 +16,22 @@ import {
   FURNISHING_LABELS,
   FURNITURE_ITEMS,
   LISTING_STATUS_LABELS,
+  MGMT_ZONES,
   PAYMENT_CYCLE_LABELS,
   SCORE_CRITERIA,
   UNIT_TYPE_LABELS,
+  mgmtZoneById,
+  mgmtZoneOptionLabel,
 } from "@/lib/constants";
 import { calculateCosts } from "@/lib/costs";
+import { formatVnd } from "@/lib/format";
 import { listingFormSchema, type ListingFormValues } from "@/lib/validators";
 import type { ListingPhoto, UserSettings } from "@prisma/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Copy, Plus, Save, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 
 export function ListingForm({
@@ -44,11 +48,11 @@ export function ListingForm({
   photos: ListingPhoto[];
 }) {
   const router = useRouter();
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(
-    "idle"
-  );
+  const [saveState, setSaveState] = useState<
+    "idle" | "saving" | "saved" | "error" | "invalid"
+  >("idle");
   const [deleting, setDeleting] = useState(false);
-  const skipFirst = useRef(true);
+  const [editRate, setEditRate] = useState(false);
 
   const {
     register,
@@ -56,8 +60,8 @@ export function ListingForm({
     handleSubmit,
     watch,
     setValue,
-    getValues,
-    formState: { errors },
+    reset,
+    formState: { errors, isDirty },
   } = useForm<ListingFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(listingFormSchema) as any,
@@ -116,29 +120,13 @@ export function ListingForm({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Lỗi lưu");
+      reset(data);
       setSaveState("saved");
-      setTimeout(() => setSaveState("idle"), 1500);
+      setTimeout(() => setSaveState("idle"), 2000);
     } catch {
       setSaveState("error");
     }
   }
-
-  // Autosave draft every ~1s after changes
-  useEffect(() => {
-    if (skipFirst.current) {
-      skipFirst.current = false;
-      return;
-    }
-    const timer = setTimeout(() => {
-      const current = getValues();
-      const parsed = listingFormSchema.safeParse(current);
-      if (parsed.success) {
-        void save(parsed.data);
-      }
-    }, 1000);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values]);
 
   async function duplicate() {
     const res = await fetch(`/api/listings/${listingId}/duplicate`, {
@@ -164,10 +152,25 @@ export function ListingForm({
   }
 
   const furniture = values.furnitureItems ?? [];
+  const mgmtZone = mgmtZoneById(values.mgmtZone) ?? MGMT_ZONES[MGMT_ZONES.length - 1];
+  const tableRate = mgmtZone.perM2;
+  const savedRate = values.mgmtFeePerM2 ?? null;
+  const rateDiffers = tableRate != null && savedRate !== tableRate;
+  const showRateInput = tableRate == null || rateDiffers || editRate;
+  const areaBasisLabel = values.mgmtFeeBasis === "GROSS" ? "tim tường" : "thông thủy";
+
+  function selectZone(id: string) {
+    setEditRate(false);
+    setValue("mgmtZone", id, { shouldDirty: true });
+    const zone = mgmtZoneById(id);
+    if (zone?.perM2 != null) {
+      setValue("mgmtFeePerM2", zone.perM2, { shouldDirty: true });
+    }
+  }
 
   return (
     <form
-      onSubmit={handleSubmit(save)}
+      onSubmit={handleSubmit(save, () => setSaveState("invalid"))}
       className="space-y-3 pb-28"
     >
       <div className="flex items-center justify-between gap-2">
@@ -184,7 +187,13 @@ export function ListingForm({
             <span className="text-emerald-600">Đã lưu</span>
           )}
           {saveState === "error" && (
-            <span className="text-rose-600">Lỗi lưu</span>
+            <span className="text-rose-600">Không lưu được</span>
+          )}
+          {saveState === "invalid" && (
+            <span className="text-rose-600">Kiểm tra ô bắt buộc</span>
+          )}
+          {saveState === "idle" && isDirty && (
+            <span className="text-amber-700">Chưa lưu</span>
           )}
           <Button type="button" variant="outline" size="sm" onClick={duplicate}>
             <Copy className="h-3.5 w-3.5" />
@@ -201,11 +210,6 @@ export function ListingForm({
           <Input label="Dự án" {...register("project")} />
           <Input label="Tòa / block" {...register("building")} />
           <Input label="Số căn" {...register("unitNumber")} />
-          <Input label="Địa chỉ" {...register("address")} />
-          <Input label="Link tin đăng" {...register("listingUrl")} />
-          <Input label="Người liên hệ" {...register("contactName")} />
-          <Input label="SĐT" {...register("contactPhone")} inputMode="tel" />
-          <Input label="Ngày xem" type="date" {...register("viewedAt")} />
           <Select
             label="Trạng thái"
             options={Object.entries(LISTING_STATUS_LABELS).map(([value, label]) => ({
@@ -215,6 +219,18 @@ export function ListingForm({
             {...register("status")}
           />
         </div>
+        <details className="rounded-xl border border-slate-200 px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium text-slate-600">
+            Địa chỉ, link, liên hệ
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Input label="Địa chỉ" {...register("address")} />
+            <Input label="Link tin đăng" {...register("listingUrl")} />
+            <Input label="Người liên hệ" {...register("contactName")} />
+            <Input label="SĐT" {...register("contactPhone")} inputMode="tel" />
+            <Input label="Ngày xem" type="date" {...register("viewedAt")} />
+          </div>
+        </details>
       </Accordion>
 
       <Accordion title="b. Thông tin căn">
@@ -420,141 +436,95 @@ export function ListingForm({
               />
             )}
           />
-          <Controller
-            control={control}
-            name="depositAmount"
-            render={({ field }) => (
-              <MoneyInput
-                label="Cọc (số tiền — ưu tiên hơn tháng)"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-          <Select
-            label="Thanh toán"
-            options={Object.entries(PAYMENT_CYCLE_LABELS).map(([value, label]) => ({
-              value,
-              label,
-            }))}
-            {...register("paymentCycle")}
-          />
-          <Controller
-            control={control}
-            name="brokerageFee"
-            render={({ field }) => (
-              <MoneyInput
-                label="Phí môi giới"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-          <label className="flex items-center gap-2 self-end rounded-xl border border-slate-200 px-3 py-3 text-sm">
-            <input type="checkbox" {...register("rentIncludesMgmt")} className="accent-emerald-600" />
-            Giá thuê đã gồm phí quản lý
-          </label>
+        </div>
+        <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-sm">
+          <input type="checkbox" {...register("rentIncludesMgmt")} className="accent-emerald-600" />
+          Giá thuê đã gồm phí quản lý
+        </label>
+
+        <Select
+          label="Phí quản lý (đã gồm VAT)"
+          options={MGMT_ZONES.map((zone) => ({
+            value: zone.id,
+            label: mgmtZoneOptionLabel(zone),
+          }))}
+          value={values.mgmtZone || "custom"}
+          onChange={(e) => selectZone(e.target.value)}
+        />
+        {mgmtZone.note && (
+          <p className="-mt-2 text-xs text-slate-500">{mgmtZone.note}</p>
+        )}
+        {tableRate != null && !rateDiffers && !editRate && (
+          <div className="-mt-2 flex items-center justify-between gap-2 text-xs text-slate-500">
+            <span>
+              {formatVnd(tableRate)}/m² × {areaBasisLabel} · đã gồm VAT
+            </span>
+            <button
+              type="button"
+              className="font-medium text-emerald-700"
+              onClick={() => setEditRate(true)}
+            >
+              Nhập đơn giá khác
+            </button>
+          </div>
+        )}
+        {rateDiffers && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <span>
+              Bảng {mgmtZone.label} là {formatVnd(tableRate)}/m². Căn này đang để{" "}
+              {formatVnd(savedRate)}/m².
+            </span>
+            <button
+              type="button"
+              className="font-medium text-emerald-700"
+              onClick={() => {
+                if (tableRate == null) return;
+                setEditRate(false);
+                setValue("mgmtFeePerM2", tableRate, { shouldDirty: true });
+              }}
+            >
+              Dùng {formatVnd(tableRate)}
+            </button>
+          </div>
+        )}
+        {showRateInput && (
           <Controller
             control={control}
             name="mgmtFeePerM2"
             render={({ field }) => (
               <MoneyInput
-                label="Phí QL đ/m²/tháng"
+                label={
+                  mgmtZone.id === "mas"
+                    ? "Đơn giá căn này (đ/m², đã gồm VAT)"
+                    : "Đơn giá (đ/m², đã gồm VAT)"
+                }
                 value={field.value}
                 onChange={field.onChange}
               />
             )}
           />
-          <Select
-            label="Cơ sở tính QL"
-            options={Object.entries(AREA_BASIS_LABELS).map(([value, label]) => ({
-              value,
-              label,
-            }))}
-            {...register("mgmtFeeBasis")}
-          />
-        </div>
+        )}
 
-        <p className="text-sm font-medium text-slate-700">Gửi xe / tháng</p>
+        <Controller
+          control={control}
+          name="motorbikeCount"
+          render={({ field }) => (
+            <QtyStepper
+              label="Xe máy"
+              hint={`${formatVnd(values.motorbikeFee ?? settings.defaultMotorbikeFee)}/tháng`}
+              value={field.value ?? 0}
+              onChange={field.onChange}
+            />
+          )}
+        />
+
         <div className="grid gap-3 sm:grid-cols-3">
-          {(
-            [
-              ["bikeCount", "bikeFee", "Xe đạp"],
-              ["motorbikeCount", "motorbikeFee", "Xe máy"],
-              ["carCount", "carFee", "Ô tô"],
-            ] as const
-          ).map(([countKey, feeKey, label]) => (
-            <div key={countKey} className="space-y-2 rounded-xl border border-slate-100 p-3">
-              <p className="text-xs font-medium text-slate-500">{label}</p>
-              <Controller
-                control={control}
-                name={countKey}
-                render={({ field }) => (
-                  <Input
-                    label="Số lượng"
-                    type="number"
-                    min={0}
-                    value={field.value ?? 0}
-                    onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                  />
-                )}
-              />
-              <Controller
-                control={control}
-                name={feeKey}
-                render={({ field }) => (
-                  <MoneyInput
-                    label="Đơn giá"
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
-          ))}
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Controller
-            control={control}
-            name="evChargeCount"
-            render={({ field }) => (
-              <Input
-                label="Số chỗ sạc xe điện"
-                type="number"
-                min={0}
-                value={field.value ?? 0}
-                onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="evChargeFee"
-            render={({ field }) => (
-              <MoneyInput
-                label="Phí sạc / chỗ"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="electricityPerKwh"
-            render={({ field }) => (
-              <MoneyInput
-                label="Điện đ/kWh (để trống = bậc thang + VAT)"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
           <Controller
             control={control}
             name="electricityKwhMonth"
             render={({ field }) => (
               <Input
-                label="Ước tính kWh/tháng"
+                label="Điện (kWh/tháng)"
                 type="number"
                 value={field.value ?? ""}
                 onChange={(e) =>
@@ -567,21 +537,10 @@ export function ListingForm({
           />
           <Controller
             control={control}
-            name="waterPerM3"
-            render={({ field }) => (
-              <MoneyInput
-                label="Nước đ/m³ (để trống = 6.700 + VAT 5%)"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-          <Controller
-            control={control}
             name="waterM3Month"
             render={({ field }) => (
               <Input
-                label="Ước tính m³/tháng"
+                label="Nước (m³/tháng)"
                 type="number"
                 value={field.value ?? ""}
                 onChange={(e) =>
@@ -599,13 +558,13 @@ export function ListingForm({
               <MoneyInput label="Internet" value={field.value} onChange={field.onChange} />
             )}
           />
-          <Controller
-            control={control}
-            name="tvFee"
-            render={({ field }) => (
-              <MoneyInput label="Truyền hình" value={field.value} onChange={field.onChange} />
-            )}
-          />
+        </div>
+
+        <details className="rounded-xl border border-slate-200 px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium text-slate-600">
+            Cọc, đơn giá xe máy, phí khác
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Controller
             control={control}
             name="leaseMonths"
@@ -622,9 +581,43 @@ export function ListingForm({
               />
             )}
           />
+          <Controller
+            control={control}
+            name="depositAmount"
+            render={({ field }) => (
+              <MoneyInput
+                label="Cọc theo số tiền (ưu tiên hơn tháng)"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+          <Select
+            label="Thanh toán"
+            options={Object.entries(PAYMENT_CYCLE_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+            {...register("paymentCycle")}
+          />
+          <Select
+            label="Cơ sở tính phí quản lý"
+            options={Object.entries(AREA_BASIS_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+            {...register("mgmtFeeBasis")}
+          />
+          <Controller
+            control={control}
+            name="motorbikeFee"
+            render={({ field }) => (
+              <MoneyInput label="Đơn giá xe máy" value={field.value} onChange={field.onChange} />
+            )}
+          />
         </div>
 
-        <div className="space-y-2">
+        <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Phí khác</p>
             <Button
@@ -668,6 +661,7 @@ export function ListingForm({
             </div>
           ))}
         </div>
+        </details>
       </Accordion>
 
       <Accordion title="d. Ước tính tổng chi phí" defaultOpen>
@@ -785,5 +779,45 @@ export function ListingForm({
         </div>
       </div>
     </form>
+  );
+}
+
+function QtyStepper({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-slate-800">{label}</p>
+        <p className="truncate text-xs text-slate-500">{hint}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          aria-label={`Giảm ${label}`}
+          className="h-9 w-9 rounded-lg border border-slate-200 text-lg leading-none text-slate-700"
+          onClick={() => onChange(Math.max(0, value - 1))}
+        >
+          −
+        </button>
+        <span className="w-5 text-center text-sm tabular-nums">{value}</span>
+        <button
+          type="button"
+          aria-label={`Tăng ${label}`}
+          className="h-9 w-9 rounded-lg border border-slate-200 text-lg leading-none text-slate-700"
+          onClick={() => onChange(value + 1)}
+        >
+          +
+        </button>
+      </div>
+    </div>
   );
 }

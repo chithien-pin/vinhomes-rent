@@ -56,6 +56,7 @@ export async function POST(_request: Request, { params }: Params) {
         rentIncludesMgmt: source.rentIncludesMgmt,
         mgmtFeePerM2: source.mgmtFeePerM2,
         mgmtFeeBasis: source.mgmtFeeBasis,
+        mgmtZone: source.mgmtZone,
         bikeCount: source.bikeCount,
         bikeFee: source.bikeFee,
         motorbikeCount: source.motorbikeCount,

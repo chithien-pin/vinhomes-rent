@@ -87,11 +87,11 @@ model UserSettings {
   weightLandlord  Int @default(10)
   weightOverall   Int @default(10)
 
-  defaultMgmtFeePerM2       Int       @default(15400)
+  defaultMgmtFeePerM2       Int       @default(17000)
   defaultMgmtFeeBasis       AreaBasis @default(NET)
   defaultBikeFee            Int       @default(29455)
   defaultMotorbikeFee       Int       @default(147273)
-  defaultCarFee             Int       @default(1227273)
+  defaultCarFee             Int       @default(2000000)
   defaultEvChargeFee        Int       @default(165000)
   defaultElectricityPerKwh  Int?
   defaultWaterPerM3         Int       @default(6700)
@@ -139,6 +139,7 @@ model Listing {
   rentIncludesMgmt Boolean      @default(false)
   mgmtFeePerM2     Int?
   mgmtFeeBasis     AreaBasis    @default(NET)
+  mgmtZone         String?
 
   bikeCount      Int @default(0)
   bikeFee        Int?

@@ -6,6 +6,7 @@ export function getRainbowSeedListings(): ListingFormValues[] {
   const baseFees = {
     mgmtFeePerM2: RAINBOW_DEFAULTS.mgmtFeePerM2,
     mgmtFeeBasis: "NET" as const,
+    mgmtZone: "rainbow",
     bikeFee: RAINBOW_DEFAULTS.bikeFee,
     motorbikeFee: RAINBOW_DEFAULTS.motorbikeFee,
     carFee: RAINBOW_DEFAULTS.carFee,

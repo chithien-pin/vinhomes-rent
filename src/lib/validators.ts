@@ -91,6 +91,7 @@ export const listingFormSchema = z.object({
   rentIncludesMgmt: z.boolean(),
   mgmtFeePerM2: optionalInt,
   mgmtFeeBasis: z.enum(["NET", "GROSS"]),
+  mgmtZone: z.string().max(40).optional().nullable(),
 
   bikeCount: z.number().int().min(0),
   bikeFee: optionalInt,
