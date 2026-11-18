@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "test:auth": "tsx scripts/test-auth.ts",
     "test:costs": "tsx scripts/test-costs.ts"
   },
   "dependencies": {

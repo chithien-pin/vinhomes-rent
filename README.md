@@ -3,10 +3,10 @@
 Web app mobile-first để ghi nhận căn hộ đang xem, tính chi phí, chấm điểm và so sánh.  
 Stack: **Next.js 15 + TypeScript + Tailwind + Prisma + Vercel Postgres + Vercel Blob**.
 
-## Dùng cá nhân
+## Đăng nhập
 
-Không đăng nhập. Mở link là vào thẳng danh sách, dùng **user đầu tiên** trong DB.  
-Ai có URL đều xem/sửa được.
+App dùng một tài khoản admin đơn giản và lưu session bằng cookie ký HMAC.  
+Production phải cấu hình `ADMIN_PASSWORD` và `SESSION_SECRET`; local dev mặc định `admin` / `admin`.
 
 ## 1. Tạo storage trên Vercel
 
@@ -24,6 +24,9 @@ Trong `.env` / `.env.local` / Vercel Environment Variables:
 DATABASE_URL="..."           # = STORAGE_PRISMA_DATABASE_URL (hoặc POSTGRES_PRISMA_URL)
 DIRECT_URL="..."             # = STORAGE_POSTGRES_URL (hoặc cùng DATABASE_URL)
 BLOB_READ_WRITE_TOKEN="..."  # từ Blob store
+ADMIN_USERNAME="admin"
+ADMIN_PASSWORD="..."
+SESSION_SECRET="..."         # chuỗi dài, ngẫu nhiên
 ```
 
 App đọc tên `DATABASE_URL` / `DIRECT_URL` — nếu Vercel chỉ inject `STORAGE_*` thì thêm alias trong Project → Settings → Environment Variables.
@@ -33,13 +36,14 @@ App đọc tên `DATABASE_URL` / `DIRECT_URL` — nếu Vercel chỉ inject `STO
 ```bash
 cp .env.example .env.local
 # Dán DATABASE_URL, DIRECT_URL, BLOB_READ_WRITE_TOKEN từ Vercel Storage
+# Đổi ADMIN_PASSWORD và SESSION_SECRET trước khi deploy
 
 npm install
 npx prisma migrate deploy
 npm run dev
 ```
 
-Mở [http://localhost:3000](http://localhost:3000). Nếu chưa có data → **Tải 3 căn mẫu**.
+Mở [http://localhost:3000](http://localhost:3000) → đăng nhập. Nếu chưa có data → **Tải 3 căn mẫu**.
 
 ### Scripts
 
@@ -49,6 +53,7 @@ Mở [http://localhost:3000](http://localhost:3000). Nếu chưa có data → **
 | `npm run build` | Build production |
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:studio` | Prisma Studio |
+| `npm run test:auth` | Kiểm tra session auth |
 | `npm run test:costs` | Kiểm tra công thức chi phí |
 
 ## 3. Deploy Vercel
@@ -58,6 +63,8 @@ Mở [http://localhost:3000](http://localhost:3000). Nếu chưa có data → **
    - `DATABASE_URL` (= `POSTGRES_PRISMA_URL`)
    - `DIRECT_URL` (= `POSTGRES_URL_NON_POOLING`)
    - `BLOB_READ_WRITE_TOKEN`
+   - `ADMIN_PASSWORD`
+   - `SESSION_SECRET`
 3. Build: `prisma generate && next build` (đã có trong `package.json`).
 4. Sau deploy lần đầu, nếu bảng chưa có:
 

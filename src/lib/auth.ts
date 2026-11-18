@@ -1,7 +1,9 @@
+import { redirect } from "next/navigation";
 import { cache } from "react";
 import { prisma } from "./prisma";
+import { isLoggedIn } from "./session";
 
-/** Lấy đúng 1 tài khoản app trong DB (dùng cá nhân, không login). */
+/** Lấy đúng 1 tài khoản app trong DB (ứng dụng dùng cá nhân). */
 export async function getSoloAppUser() {
   let user = await prisma.user.findFirst({
     include: { settings: true },
@@ -28,16 +30,28 @@ export async function getSoloAppUser() {
   return user;
 }
 
-export const requireAppUser = cache(async () => getSoloAppUser());
+export async function requireSession() {
+  if (!(await isLoggedIn())) {
+    redirect("/login");
+  }
+}
+
+/** Dedup trong cùng RSC request. */
+export const requireAppUser = cache(async () => {
+  await requireSession();
+  return getSoloAppUser();
+});
 
 export async function requireApiUser() {
+  if (!(await isLoggedIn())) {
+    throw new AuthError();
+  }
   return getSoloAppUser();
 }
 
-/** Giữ class để apiError không phải đổi — không còn dùng để chặn truy cập. */
 export class AuthError extends Error {
   status = 401;
-  constructor(message = "Unauthorized") {
+  constructor(message = "Chưa đăng nhập") {
     super(message);
     this.name = "AuthError";
   }
